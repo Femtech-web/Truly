@@ -1,0 +1,24 @@
+{
+  "name": "@truly/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
+    "build": "tsc --noEmit && wrangler deploy --dry-run --outdir dist",
+    "test": "vitest run",
+    "test:api": "node scripts/pairing-smoke.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply truly-core --local"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.2.0",
+    "@noble/hashes": "^2.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260916.1",
+    "@nimiq/core": "^2.21.0",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.132.0"
+  }
+}

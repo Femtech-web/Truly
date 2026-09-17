@@ -1,0 +1,47 @@
+@media (min-width: 481px) {
+  .miniapp-shell {
+    border-radius: 28px 28px 0 0;
+  }
+
+  .app-header {
+    border-radius: 28px 28px 0 0;
+  }
+
+}
+
+@media (max-height: 740px) {
+  .onboarding__intro {
+    margin: 44px 0 24px;
+  }
+
+  .onboarding__intro h1 {
+    font-size: 34px;
+  }
+
+  .onboarding__intro p {
+    margin-top: 12px;
+  }
+
+  .connect-card {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 355px) {
+  :root {
+    --page-gutter: 17px;
+  }
+
+  .screen-intro h1,
+  .screen-intro--compact h1 {
+    font-size: 26px;
+  }
+
+  .onboarding__intro h1 {
+    font-size: 32px;
+  }
+
+  .pairing-visual {
+    grid-template-columns: 1fr 48px 1fr;
+  }
+}

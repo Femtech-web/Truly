@@ -1,0 +1,3 @@
+# Separate learner Tasks from creator Paths
+
+Truly models an immediate learner-defined outcome as a **Task** and a creator-published, reusable curriculum as a **Path**. Starting a Path creates or resumes a Task; a learner can also create a Task directly without first finding marketplace content. This preserves the fast “learn this now” experience while giving creators a durable, versioned product that can carry quality review, progress rules and NIM or USDT pricing. “Guide” remains a teaching mode, while the overloaded word “Skill” is retired from learner-facing language because it confused the ability being gained with the content being sold.

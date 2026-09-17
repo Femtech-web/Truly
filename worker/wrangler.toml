@@ -1,0 +1,19 @@
+name = "truly-core"
+main = "src/index.ts"
+compatibility_date = "2026-09-16"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+PAIRING_ORIGIN = "http://localhost:5173"
+AI_PROVIDER = "groq"
+GROQ_MODEL = "qwen/qwen3.8-27b"
+GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
+GROQ_DATA_CONTROLS_CONFIRMED = "false"
+AI_DAILY_LIMIT = "100"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "truly-core"
+database_id = "replace-with-cloudflare-d1-id"
+migrations_dir = "../migrations"

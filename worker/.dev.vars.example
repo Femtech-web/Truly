@@ -1,0 +1,9 @@
+# Phase 5 placeholders; AI requests are not implemented yet.
+AI_PROVIDER=groq
+GROQ_MODEL=qwen/qwen3.8-27b
+GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo
+GROQ_API_KEY=
+GROQ_DATA_CONTROLS_CONFIRMED=false
+AI_DAILY_LIMIT=100
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+PAIRING_ORIGIN=http://localhost:5173

@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+  font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --canvas: #f4f5f4;
+  --surface: #ffffff;
+  --surface-soft: #f9faf9;
+  --ink: #191c1e;
+  --text: #444b50;
+  --muted: #6c7479;
+  --faint: #90979b;
+  --border: #dde4e4;
+  --border-strong: #cfdada;
+  --teal: #147a76;
+  --teal-dark: #0f625f;
+  --teal-deep: #0b2927;
+  --teal-soft: #e9f5f4;
+  --teal-pale: #f2faf9;
+  --violet: #6f63a7;
+  --violet-soft: #f0eef9;
+  --peach: #f4d9ca;
+  --success: #177569;
+  --shadow-soft: 0 18px 46px rgba(27, 42, 41, 0.07);
+  --shadow-card: 0 8px 26px rgba(27, 42, 41, 0.055);
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 25px;
+  --page-gutter: 22px;
+  --ease-out: cubic-bezier(0.2, 0.75, 0.25, 1);
+}

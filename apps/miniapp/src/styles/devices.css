@@ -1,0 +1,7 @@
+.device-management { margin-top: 20px; }
+.device-management > p { margin-block: 12px; }
+.owned-device { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-block: 18px; border-top: 1px solid var(--border); }
+.owned-device:first-of-type { margin-top: 20px; }
+.owned-device h3 { font-size: 15px; }
+.owned-device p { font-size: 13px; margin-block: 6px; }
+.revoke-confirmation { width: 100%; }

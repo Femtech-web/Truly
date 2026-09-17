@@ -1,0 +1,149 @@
+.session-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(540px, 1.18fr);
+  align-items: center;
+  gap: clamp(72px, 9vw, 118px);
+  padding-block: 116px 132px;
+}
+
+.session-copy > p:first-of-type { margin-top: 25px; }
+.session-copy > p + p { margin-top: 16px; }
+
+.session-board {
+  padding: 25px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform 220ms var(--ease-out), box-shadow 220ms ease;
+}
+
+.session-board:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(24, 35, 33, 0.09);
+}
+
+.session-board__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+}
+
+.session-board__head > div { display: flex; align-items: center; gap: 10px; }
+.session-title { font-size: 0.94rem; font-weight: 750; }
+
+.session-status {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--truly-100);
+  color: var(--truly-700);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.session-board__head > span { color: var(--muted); font-size: 0.72rem; font-weight: 600; }
+
+.session-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding-bottom: 20px;
+}
+
+.session-progress i { height: 4px; border-radius: 999px; background: var(--border-soft); }
+.session-progress i:first-child,
+.session-progress i:nth-child(2) { background: var(--truly-500); }
+
+.session-row {
+  display: grid;
+  grid-template-columns: 25px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  padding: 14px 11px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.session-marker {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 1px solid #ccd5d4;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.65rem;
+}
+
+.session-row--complete .session-marker { border-color: var(--truly-600); background: var(--truly-600); }
+
+.session-row--active {
+  margin-inline: -8px;
+  padding-inline: 19px;
+  border-top-color: transparent;
+  border-radius: 10px;
+  background: var(--truly-50);
+}
+
+.session-row--active + .session-row { border-top-color: transparent; }
+.session-row--active .session-marker { border: 5px solid var(--truly-100); background: var(--truly-500); }
+.session-row b { display: block; font-size: 0.84rem; font-weight: 700; }
+.session-row p { margin-top: 5px; color: var(--muted); font-size: 0.75rem; line-height: 1.5; }
+.session-row > span:last-child { color: var(--muted); font-size: 0.69rem; font-weight: 600; }
+
+.session-action {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 19px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink);
+  color: white;
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-out), background 150ms ease;
+}
+
+.session-action:hover { background: #303436; transform: translateY(-1px); }
+
+.principles-section {
+  padding-block: 92px 128px;
+  text-align: center;
+}
+
+.principles-heading { max-width: 690px; margin-inline: auto; }
+.principles-heading > p { max-width: 590px; margin: 21px auto 0; }
+
+.principles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 58px;
+  text-align: left;
+}
+
+.principles-grid article {
+  min-height: 220px;
+  padding: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  transition: transform 200ms var(--ease-out), border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.principles-grid article:hover {
+  transform: translateY(-4px);
+  border-color: #c6d5d3;
+  box-shadow: var(--shadow-card);
+}
+
+.principles-grid strong { color: var(--truly-600); font-size: 0.75rem; font-weight: 700; }
+.principles-grid h3 { margin-top: 31px; font-size: 1.08rem; letter-spacing: -0.02em; }
+.principles-grid p { margin-top: 12px; color: var(--muted); font-size: 0.86rem; line-height: 1.68; }
