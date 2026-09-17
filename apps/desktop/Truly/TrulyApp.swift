@@ -40,12 +40,13 @@ final class TrulyAppDelegate: NSObject, NSApplicationDelegate {
             .environmentObject(controller.learning)
             .environmentObject(controller.pairing)
         let hostingController = NSHostingController(rootView: rootView)
+        hostingController.sizingOptions = [.preferredContentSize]
         hostingController.view.layoutSubtreeIfNeeded()
 
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = hostingController
-        popover.contentSize = CGSize(width: 300, height: 410)
+        popover.contentSize = hostingController.view.fittingSize
         statusItem = item
     }
 

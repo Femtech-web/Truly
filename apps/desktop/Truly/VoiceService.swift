@@ -38,6 +38,7 @@ final class VoiceRecorder {
         do { recorder = try AVAudioRecorder(url: url, settings: settings) }
         catch { cancel(); throw VoiceError.recordingFailed }
         recorder.prepareToRecord()
+        recorder.isMeteringEnabled = true
         guard recorder.record() else { cancel(); throw VoiceError.recordingFailed }
         self.recorder = recorder
     }
@@ -61,6 +62,12 @@ final class VoiceRecorder {
         if let recordingURL { try? FileManager.default.removeItem(at: recordingURL) }
         recordingURL = nil
     }
+
+    func hasAudibleSpeech() -> Bool {
+        guard let recorder else { return false }
+        recorder.updateMeters()
+        return recorder.averagePower(forChannel: 0) > -42
+    }
 }
 
 enum VoiceError: LocalizedError {
@@ -72,9 +79,9 @@ enum VoiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .permissionDenied: "Allow Microphone access in System Settings, then hold the microphone again."
-        case .recordingFailed: "Truly could not record that question. Hold the microphone and try again."
-        case .tooShort: "That recording was too short. Hold to talk until you finish your question."
+        case .permissionDenied: "Allow Microphone access in System Settings, then choose Record a question again."
+        case .recordingFailed: "Truly could not record that question. Try again, or type it instead."
+        case .tooShort: "That recording was too short. Try saying your question again."
         case .invalidResponse: "Truly could not understand that recording. Try again."
         case .server(let message): message
         }
@@ -125,8 +132,8 @@ final class SpeechPlaybackService: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
         utterance.rate = 0.48
-        synthesizer.speak(utterance)
         onPlayingChanged?(true)
+        synthesizer.speak(utterance)
     }
     func stop() { synthesizer.stopSpeaking(at: .immediate); onPlayingChanged?(false) }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {

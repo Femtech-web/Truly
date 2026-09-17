@@ -36,13 +36,13 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Truly uses your microphone only when you choose to ask a spoken question.</string>
+	<string>In Voice mode, Truly listens locally for Hey Truly until you pause. Only a deliberately recorded question is sent for cloud transcription.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Truly captures the screen you choose to share so it can explain what is visible and guide your next step.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Truly can transcribe spoken questions when you choose voice input.</string>
+	<string>Truly recognizes Hey Truly and spoken questions on this Mac. Hands-free voice never uses cloud speech recognition.</string>
 	<key>TRULY_CORE_URL</key>
 	<string>http://127.0.0.1:8787</string>
 </dict>

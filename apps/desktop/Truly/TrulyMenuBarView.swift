@@ -5,9 +5,15 @@ struct TrulyMenuBarView: View {
     @ObservedObject var controller: DesktopAppController
     @EnvironmentObject private var learning: LearningSessionModel
     @EnvironmentObject private var pairing: DevicePairingModel
+    @ObservedObject private var voice: LocalVoiceService
+
+    init(controller: DesktopAppController) {
+        self.controller = controller
+        self.voice = controller.voice
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 TrulyBrandMark(size: 28)
                 VStack(alignment: .leading, spacing: 2) {
@@ -22,25 +28,16 @@ struct TrulyMenuBarView: View {
                     .accessibilityLabel(pairing.state.label)
             }
 
-            connectionSummary
-
             if let session = pairing.activeLearningSession {
                 Button(action: controller.openTaskPanel) {
                     VStack(alignment: .leading, spacing: 5) {
-                        HStack {
-                            Text(session.source.kind == "task" ? "CURRENT TASK" : "CURRENT PATH")
-                                .font(.system(size: 9, weight: .semibold)).tracking(0.45)
-                                .foregroundStyle(TrulyTheme.tealDark)
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                        }
-                        Text(session.source.title).font(.system(size: 12, weight: .semibold)).lineLimit(2)
-                        Text("Step \(session.currentStep.index) of \(session.currentStep.total) · \(session.currentStep.title)")
-                            .font(.system(size: 10)).foregroundStyle(TrulyTheme.muted).lineLimit(2)
+                        Text(session.source.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                        Text("Step \(session.currentStep.index) of \(session.currentStep.total)")
+                            .font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
                     }
-                    .padding(12)
+                    .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(TrulyTheme.tealPale, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(TrulyTheme.canvas, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .trulyPointingCursor()
@@ -50,23 +47,50 @@ struct TrulyMenuBarView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 8) {
-                Button(controller.companionVisible ? "Hide companion" : "Show companion", action: controller.toggleCompanion)
-                    .buttonStyle(TrulySecondaryButtonStyle())
-                Button("Ask Truly", action: controller.openWorkspace)
-                    .buttonStyle(TrulySecondaryButtonStyle())
+            HStack {
+                Text("Input").font(.system(size: 11))
+                Spacer()
+                Picker("Input", selection: Binding(get: { controller.inputMode }, set: { controller.setInputMode($0) })) {
+                    ForEach(TrulyInputMode.allCases) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 150)
             }
-
-            Toggle("Read replies aloud", isOn: Binding(
-                get: { learning.readRepliesAloud },
-                set: { learning.setReadRepliesAloud($0) }
-            ))
-            .toggleStyle(.switch)
-            .font(.system(size: 12))
-
+            if controller.inputMode == .voice {
+                HStack {
+                    Text("Reply").font(.system(size: 11))
+                    Spacer()
+                    Picker("Reply", selection: Binding(get: { learning.readRepliesAloud }, set: { learning.setReadRepliesAloud($0) })) {
+                        Text("Text").tag(false)
+                        Text("Spoken").tag(true)
+                    }.pickerStyle(.segmented).labelsHidden().frame(width: 150)
+                }
+                HStack(alignment: .top, spacing: 8) {
+                    Text(controller.voiceAvailability).font(.system(size: 10))
+                        .foregroundStyle(TrulyTheme.muted).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    if case .unavailable = voice.state {
+                        Button("Retry", action: controller.retryVoice).buttonStyle(.plain)
+                    } else {
+                        Button(controller.voicePaused ? "Resume" : "Pause", action: controller.toggleVoicePause).buttonStyle(.plain)
+                    }
+                }
+                Button("Record a question", action: controller.recordVoiceQuestion)
+                    .buttonStyle(.plain).font(.system(size: 11))
+                    .disabled(!controller.canRecordQuestion)
+                    .help("Deliberately records one question for transcription with Groq, without wake detection")
+            }
             Divider()
-            Button("Settings…", action: controller.openSettings).buttonStyle(.plain)
-            Button("Quit Truly") { NSApp.terminate(nil) }.buttonStyle(.plain)
+            HStack {
+                Button("Open Task", action: controller.openTaskPanel).buttonStyle(.plain)
+                    .disabled(pairing.activeLearningSession == nil)
+                Spacer()
+                Button("Ask Truly", action: controller.openWorkspace).buttonStyle(.plain)
+            }
+            Button(controller.companionVisible ? "Hide companion" : "Show companion", action: controller.toggleCompanion).buttonStyle(.plain)
+            HStack {
+                Button("Settings…", action: controller.openSettings).buttonStyle(.plain)
+                Spacer()
+                Button("Quit") { NSApp.terminate(nil) }.buttonStyle(.plain)
+            }
         }
         .padding(16)
         .frame(width: 300, alignment: .leading)
@@ -78,31 +102,6 @@ struct TrulyMenuBarView: View {
         .onAppear { learning.refreshPermissions() }
     }
 
-    @ViewBuilder
-    private var connectionSummary: some View {
-        if pairing.state == .paired {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Mac paired").font(.system(size: 11, weight: .medium))
-                    Text(shortAddress).font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
-                }
-                Spacer()
-                Button("Manage", action: controller.openSettings).buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(TrulyTheme.tealDark)
-            }
-        } else {
-            HStack(alignment: .center, spacing: 10) {
-                Text(pairing.state.label).font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
-                Spacer()
-                Button("Connect this Mac", action: controller.openSettings).buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(TrulyTheme.tealDark)
-            }
-        }
-    }
-
-    private var shortAddress: String {
-        pairing.walletAddress.map { "\($0.prefix(8))…\($0.suffix(5))" } ?? "Wallet connected"
-    }
 }
 
 struct TrulyTaskPanelView: View {
@@ -166,8 +165,9 @@ struct TrulyTaskPanelView: View {
 
             if let challenge = session.currentStep.challenge {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Challenge").font(.system(size: 11, weight: .semibold))
+                    Text("Practice goal").font(.system(size: 11, weight: .semibold))
                     Text(challenge).font(.system(size: 12)).foregroundStyle(TrulyTheme.text)
+                    Text("Verified practice checks are not available yet.").font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
                 }
             }
         }
@@ -204,6 +204,7 @@ struct TrulyTaskPanelView: View {
 }
 
 struct TrulySettingsView: View {
+    @ObservedObject var controller: DesktopAppController
     enum Section: String, CaseIterable, Identifiable { case connection = "Connection", privacy = "Privacy"; var id: String { rawValue } }
     @EnvironmentObject private var learning: LearningSessionModel
     @EnvironmentObject private var pairing: DevicePairingModel
@@ -260,7 +261,7 @@ struct TrulySettingsView: View {
     private var privacy: some View {
         VStack(alignment: .leading, spacing: 14) {
             settingsCard(title: "Screen sharing") {
-                Text("Truly sees one screen only when you click the companion. It does not watch in the background.")
+                Text("Truly sees one screen when you click the companion or finish a ‘Hey Truly’ question. It never watches continuously.")
                     .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
                 if !learning.screenPermissionGranted {
                     Button("Allow Screen Recording", action: learning.requestScreenPermission).buttonStyle(TrulyPrimaryButtonStyle())
@@ -274,11 +275,15 @@ struct TrulySettingsView: View {
                     .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
                 if learning.processorConsentGranted {
                     Button("Turn off AI help", action: learning.revokeProcessorConsent).buttonStyle(TrulySecondaryButtonStyle())
+                } else {
+                    Text("Only the screen or recording you deliberately submit is sent to Groq. Truly does not save either one.")
+                        .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
+                    Button("Allow AI help", action: learning.approveProcessor).buttonStyle(TrulySecondaryButtonStyle())
+                        .disabled(learning.activeLearningSession == nil)
                 }
-                Toggle("Read replies aloud", isOn: Binding(get: { learning.readRepliesAloud }, set: { learning.setReadRepliesAloud($0) }))
-                    .toggleStyle(.switch)
-                Text("Voice records only while you hold the microphone. Audio is discarded after transcription.")
+                Text("Voice mode listens locally for ‘Hey Truly’. Completed questions share one screen and question text with Groq. Record a question sends only that requested recording to Groq, then discards it. Pause or hide the companion to stop listening.")
                     .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
+                Button("Reset hands-free permission", action: controller.revokeWakeConsent).buttonStyle(TrulySecondaryButtonStyle())
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -10,6 +10,8 @@ Phase 0, private preparation, and website foundation are established. The user h
 
 ## Source-of-truth pointers
 
+Desktop input refinement: Text/Voice selection, separate Voice-only reply preference, gated on-device Hey Truly/question recognition, cursor-offset following, pause/consent/reset and explicit cloud Record a question are implemented. Voice starts paused across restart and suspends during editing/playback/sleep/logout. Explain/Guide have separate intent prompts and validated approximate focus; Practice checking remains unavailable. Static/unit checks are not native microphone/wake/energy acceptance.
+
 - **Product or scope work:** read `private-notes/docs/00-product-brief.md` and `private-notes/docs/01-mvp-scope.md` when the ignored private notes are available.
 - **Architecture changes:** read `private-notes/docs/03-system-architecture.md` and update public `docs/ARCHITECTURE.md` when the accepted boundary changes.
 - **Implementation sequencing:** follow `private-notes/docs/04-implementation-plan.md`; pass each phase gate before advancing.

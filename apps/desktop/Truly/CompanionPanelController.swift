@@ -7,6 +7,9 @@ final class CompanionPanelController {
     private let onInvoke: (CGPoint) -> Void
     private var panel: NSPanel?
     private var greetingPanel: NSPanel?
+    private var followTask: Task<Void, Never>?
+    private var following = false
+    private var voiceState: LocalVoiceState = .paused
 
     init(onInvoke: @escaping (CGPoint) -> Void) { self.onInvoke = onInvoke }
 
@@ -30,7 +33,8 @@ final class CompanionPanelController {
             panel.setFrameOrigin(CGPoint(x: screen.visibleFrame.maxX - 90, y: screen.visibleFrame.midY))
         }
         panel?.orderFrontRegardless()
-        if greeting { showBubble(title: "Truly is ready.", message: "Drag me beside your work. Click to share that screen.") }
+        updateFollowing()
+        if greeting { showBubble(title: "Truly is ready.", message: following ? "Resume voice from the menu when you’re ready." : "Drag me beside your work. Click to ask a question.") }
     }
 
     func showLearningReady(
@@ -48,7 +52,37 @@ final class CompanionPanelController {
         )
     }
 
-    func hide() { dismissGreeting(); panel?.orderOut(nil) }
+    func hide() { followTask?.cancel(); followTask = nil; dismissGreeting(); panel?.orderOut(nil) }
+
+    func setFollowing(_ enabled: Bool) {
+        following = enabled
+        updateFollowing()
+    }
+
+    func setVoiceState(_ state: LocalVoiceState) {
+        voiceState = state
+        (panel?.contentView as? CompanionHitView)?.voiceState = following ? state : nil
+    }
+
+    private func updateFollowing() {
+        followTask?.cancel(); followTask = nil
+        panel?.ignoresMouseEvents = following
+        (panel?.contentView as? CompanionHitView)?.voiceState = following ? voiceState : nil
+        panel?.contentView?.setAccessibilityHelp(following ? "Voice companion. Use the Truly menu to pause or return to Text mode." : "Drag to position. Click to ask about this area.")
+        guard following, panel?.isVisible == true else { return }
+        followTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, let panel = panel else { return }
+                let location = NSEvent.mouseLocation
+                if let frame = NSScreen.screens.first(where: { $0.frame.contains(location) })?.visibleFrame {
+                    // Keep a small offset and never intercept the learner's real pointer.
+                    panel.setFrameOrigin(CGPoint(x: min(max(location.x + 18, frame.minX), frame.maxX - 40),
+                                                 y: min(max(location.y - 42, frame.minY), frame.maxY - 44)))
+                }
+                try? await Task.sleep(for: .milliseconds(33))
+            }
+        }
+    }
 
     private func showBubble(
         title: String,
@@ -81,6 +115,7 @@ final class CompanionPanelController {
         let bubbleSize = greetingPanel.frame.size
         var x = panel.frame.minX - bubbleSize.width - 8
         if x < screen.minX + 8 { x = panel.frame.maxX + 8 }
+        x = min(max(x, screen.minX + 8), screen.maxX - bubbleSize.width - 8)
         let y = min(max(panel.frame.midY - bubbleSize.height / 2, screen.minY + 8), screen.maxY - bubbleSize.height - 8)
         greetingPanel.setFrameOrigin(CGPoint(x: x, y: y))
     }
@@ -101,6 +136,7 @@ final class CompanionPanelController {
 
 @MainActor
 private final class CompanionHitView: NSView {
+    var voiceState: LocalVoiceState? { didSet { needsDisplay = true } }
     var onInvoke: ((CGPoint) -> Void)?
     var onMove: ((CGPoint) -> Void)?
     private var startMouse = CGPoint.zero
@@ -126,6 +162,16 @@ private final class CompanionHitView: NSView {
         shadow.shadowBlurRadius = 5; shadow.shadowOffset = CGSize(width: 0, height: -1)
         NSGraphicsContext.saveGraphicsState(); shadow.set(); arrow.fill(); NSGraphicsContext.restoreGraphicsState()
         NSColor.white.withAlphaComponent(0.85).setStroke(); arrow.lineWidth = 1; arrow.stroke()
+        if let voiceState {
+            let dot = NSBezierPath(ovalIn: CGRect(x: 26, y: 5, width: 8, height: 8))
+            let active = voiceState == .armed || voiceState == .listening
+            (active ? NSColor.systemTeal : NSColor.systemGray).setFill(); dot.fill()
+            NSColor.white.setStroke(); dot.lineWidth = 1; dot.stroke()
+            if voiceState == .listening {
+                let ring = NSBezierPath(ovalIn: CGRect(x: 23, y: 2, width: 14, height: 14))
+                NSColor.systemTeal.setStroke(); ring.lineWidth = 1; ring.stroke()
+            }
+        }
     }
 
     override func mouseDown(with event: NSEvent) {

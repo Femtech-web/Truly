@@ -81,6 +81,7 @@ struct TrulyRootView: View {
             !model.processorConsentGranted { return true }
         if case .failed = model.phase { return true }
         if case .failed = model.voiceState { return true }
+        if model.voiceState.isBusy { return true }
         return false
     }
 
@@ -98,7 +99,7 @@ struct TrulyRootView: View {
         } else if model.capturedScreen == nil {
             HStack(spacing: 7) {
                 Circle().fill(TrulyTheme.muted.opacity(0.45)).frame(width: 6, height: 6)
-                Text("Close this bar, bring your work into view, then click the teal companion.")
+                Text("Close this bar. Click the companion in Text mode, or say ‘Hey Truly’ in Voice mode.")
                     .font(.system(size: 12))
                     .foregroundStyle(TrulyTheme.muted)
                     .lineLimit(2)
@@ -121,6 +122,15 @@ struct TrulyRootView: View {
             compactNotice(message)
         } else if case .failed(let message) = model.voiceState {
             compactNotice(message)
+        } else if model.voiceState == .listening {
+            HStack {
+                compactNotice("Listening… speak your question, then pause.")
+                Button("Finish", action: model.endVoice).buttonStyle(TrulySecondaryButtonStyle())
+            }
+        } else if model.voiceState == .transcribing {
+            compactNotice("Writing down your question…")
+        } else if model.voiceState == .requestingPermission {
+            compactNotice("Allow Microphone access to ask a spoken question.")
         }
     }
 

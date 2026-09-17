@@ -16,6 +16,7 @@ final class LearningSessionModel: ObservableObject {
     @Published var processorConsentGranted = false
     @Published var voiceState: VoiceInputState = .idle
     @Published var readRepliesAloud = UserDefaults.standard.bool(forKey: "truly.voice.read-replies")
+    var allowsSpokenReplies = false
     @Published private(set) var activeLearningSession: DesktopLearningSession?
     private let captureService = ScreenCaptureService()
     private let voiceRecorder = VoiceRecorder()
@@ -86,7 +87,8 @@ final class LearningSessionModel: ObservableObject {
     }
 
     func approveProcessor() {
-        guard capturedScreen != nil, activeLearningSession != nil else { return }
+        // Consent can be given in Settings before the first voice-invoked capture.
+        guard activeLearningSession != nil else { return }
         processorConsentGranted = true
         UserDefaults.standard.set(Self.processorConsentRevision, forKey: Self.processorConsentKey)
         if case .failed = phase { phase = .idle }
@@ -131,7 +133,7 @@ final class LearningSessionModel: ObservableObject {
                 response = [turn.explanation, "Next: \(turn.nextAction)", turn.clarification]
                     .compactMap { $0 }.joined(separator: "\n\n")
                 phase = .idle
-                if readRepliesAloud { speechPlayback.speak(response) }
+                if readRepliesAloud && allowsSpokenReplies { speechPlayback.speak(response) }
                 if let target = turn.target {
                     onResponseReady?(CGFloat(target.x), CGFloat(target.y), displayFrame, response)
                 } else {
@@ -183,7 +185,7 @@ final class LearningSessionModel: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.processorConsentKey)
     }
 
-    func beginVoice() {
+    func beginVoice(automaticEnd: Bool = false) {
         guard canUseVoice, let _ = sessionToken() else { return }
         voicePressed = true
         voiceState = .requestingPermission
@@ -198,9 +200,23 @@ final class LearningSessionModel: ObservableObject {
                 else {
                     voiceTimeoutTask?.cancel()
                     voiceTimeoutTask = Task {
-                        try? await Task.sleep(for: .seconds(30))
-                        guard !Task.isCancelled, voiceState == .listening else { return }
-                        endVoice()
+                        let started = Date()
+                        var lastSpeech: Date?
+                        while !Task.isCancelled, voiceState == .listening, generation == captureGeneration {
+                            let now = Date()
+                            if automaticEnd, voiceRecorder.hasAudibleSpeech() { lastSpeech = now }
+                            if automaticEnd, lastSpeech == nil, now.timeIntervalSince(started) >= 8 {
+                                voiceRecorder.cancel()
+                                voicePressed = false
+                                voiceState = .failed("Truly did not hear a question. Try again, or type it instead.")
+                                return
+                            }
+                            if now.timeIntervalSince(started) >= 30 ||
+                                (automaticEnd && lastSpeech.map { now.timeIntervalSince($0) >= 1.6 } == true) {
+                                endVoice(); return
+                            }
+                            try? await Task.sleep(for: .milliseconds(80))
+                        }
                     }
                 }
             } catch is CancellationError {

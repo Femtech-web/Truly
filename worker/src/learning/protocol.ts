@@ -11,7 +11,7 @@ export interface LearningTurnRequest {
   stepId: string
   mode: LearningMode
   question: string
-  frame: { mimeType: 'image/jpeg'; base64: string }
+  frame: { mimeType: 'image/jpeg'; base64: string; focus?: { x: number; y: number } }
   consent: { processor: 'groq'; revision: typeof AI_CONSENT_REVISION; approved: true }
 }
 
@@ -71,10 +71,19 @@ export function parseLearningTurn(value: unknown): LearningTurnRequest {
     throw new HttpError(400, 'invalid_learning_turn', 'Truly could not send that question. Capture the screen and try again.')
   }
   if (value.mode !== 'explain' && value.mode !== 'guide' && value.mode !== 'challenge') {
-    throw new HttpError(400, 'invalid_learning_turn', 'Choose Explain, Guide or Challenge, then try again.')
+    throw new HttpError(400, 'invalid_learning_turn', 'Choose Explain or Guide, then try again.')
   }
-  if (!isRecord(value.frame) || !exactKeys(value.frame, ['mimeType', 'base64']) || value.frame.mimeType !== 'image/jpeg') {
+  if (!isRecord(value.frame) || !exactKeys(value.frame, ['mimeType', 'base64', 'focus']) || value.frame.mimeType !== 'image/jpeg') {
     throw new HttpError(400, 'invalid_frame', 'Truly could not read that shared screen. Capture it again.')
+  }
+  let focus: { x: number; y: number } | undefined
+  if (value.frame.focus !== undefined) {
+    const point = value.frame.focus
+    if (!isRecord(point) || !exactKeys(point, ['x', 'y']) || typeof point.x !== 'number' || typeof point.y !== 'number' ||
+        !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) {
+      throw new HttpError(400, 'invalid_frame', 'Truly could not identify that area. Share your screen again.')
+    }
+    focus = { x: point.x, y: point.y }
   }
   if (!isRecord(value.consent) || !exactKeys(value.consent, ['processor', 'revision', 'approved']) ||
       value.consent.processor !== 'groq' || value.consent.revision !== AI_CONSENT_REVISION || value.consent.approved !== true) {
@@ -86,7 +95,7 @@ export function parseLearningTurn(value: unknown): LearningTurnRequest {
     stepId: identifier(value.stepId, 'stepId'),
     mode: value.mode,
     question: boundedString(value.question, 2_000, 'question'),
-    frame: { mimeType: 'image/jpeg', base64: validateJpeg(value.frame.base64) },
+    frame: { mimeType: 'image/jpeg', base64: validateJpeg(value.frame.base64), ...(focus ? { focus } : {}) },
     consent: { processor: 'groq', revision: AI_CONSENT_REVISION, approved: true },
   }
 }
