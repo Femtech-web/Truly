@@ -6,6 +6,7 @@
   <p>
     <a href="https://www.usetruly.site/">Website</a> ·
     <a href="https://www.usetruly.site/docs">Product guide</a> ·
+    <a href="https://youtu.be/ZSqqTbh_GzY">Demo video</a> ·
     <a href="https://github.com/Femtech-web/Truly/releases/download/v0.1.0/Truly-0.1.0-macOS-universal.dmg">Download for macOS</a> ·
     <a href="https://nimpay.app/miniapps/open/app.usetruly.site">Open in Nimiq Pay</a> ·
     <a href="#how-truly-works">How it works</a> ·
