@@ -4,12 +4,14 @@
   <p><strong>Learn anything. By doing it.</strong></p>
   <p>A wallet-connected learning system that moves a goal from your phone to your Mac, teaches beside the real work, and records progress only after you show what you did.</p>
   <p>
+    <a href="https://www.usetruly.site/">Website</a> ·
+    <a href="https://www.usetruly.site/docs">Product guide</a> ·
+    <a href="https://nimpay.app/miniapps/open/app.usetruly.site">Open in Nimiq Pay</a> ·
     <a href="#how-truly-works">How it works</a> ·
     <a href="#why-nimiq">Why Nimiq</a> ·
     <a href="#retention-and-revenue">Product model</a> ·
     <a href="#run-truly-locally">Run locally</a> ·
-    <a href="docs/ARCHITECTURE.md">Architecture</a> ·
-    <a href="docs/PRODUCT-GUIDE.md">Product guide</a>
+    <a href="docs/ARCHITECTURE.md">Architecture</a>
   </p>
 </div>
 

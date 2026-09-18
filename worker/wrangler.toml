@@ -6,8 +6,8 @@ workers_dev = true
 preview_urls = false
 
 [vars]
-ALLOWED_ORIGINS = "https://truly-core.truly-learning-app.workers.dev"
-PAIRING_ORIGIN = "https://truly-core.truly-learning-app.workers.dev"
+ALLOWED_ORIGINS = "https://app.usetruly.site"
+PAIRING_ORIGIN = "https://app.usetruly.site"
 AI_PROVIDER = "groq"
 GROQ_MODEL = "qwen/qwen3.8-27b"
 GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
@@ -23,6 +23,10 @@ binding = "DB"
 database_name = "truly-core"
 database_id = "01df0367-3b66-4275-84a0-78f9b26dde24"
 migrations_dir = "../migrations"
+
+[[routes]]
+pattern = "app.usetruly.site"
+custom_domain = true
 
 [assets]
 directory = "../apps/miniapp/dist"

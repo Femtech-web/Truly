@@ -1,4 +1,4 @@
-const openInNimiqPay = 'https://nimpay.app/miniapps/open/truly-core.truly-learning-app.workers.dev'
+const openInNimiqPay = 'https://nimpay.app/miniapps/open/app.usetruly.site'
 
 export function Hero() {
   return (

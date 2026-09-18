@@ -44,6 +44,6 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Truly recognizes Hey Truly and spoken questions on this Mac. Hands-free voice never uses cloud speech recognition.</string>
 	<key>TRULY_CORE_URL</key>
-	<string>http://127.0.0.1:8787</string>
+	<string>https://app.usetruly.site</string>
 </dict>
 </plist>
