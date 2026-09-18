@@ -28,6 +28,7 @@ function validLink(value: string): boolean {
 
 export function TaskCreateSheet({ busy, requestMessage, open, onClose, onCreate, onCreated }: Props) {
   const titleId = useId()
+  const backdropRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
   const [goal, setGoal] = useState('')
   const [workspaceUrl, setWorkspaceUrl] = useState('')
@@ -38,8 +39,45 @@ export function TaskCreateSheet({ busy, requestMessage, open, onClose, onCreate,
 
   useEffect(() => {
     if (!open) return
+    const viewport = window.visualViewport
+    const syncViewport = () => {
+      const backdrop = backdropRef.current
+      if (!backdrop) return
+      backdrop.style.setProperty('--sheet-viewport-height', `${viewport?.height ?? window.innerHeight}px`)
+    }
+    const keepFieldVisible = (event: FocusEvent) => {
+      const field = event.target
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return
+      window.setTimeout(() => {
+        const form = field.closest('form')
+        if (!form) return
+        const fieldBox = field.getBoundingClientRect()
+        const formBox = form.getBoundingClientRect()
+        const centered = form.scrollTop + fieldBox.top - formBox.top - (form.clientHeight - fieldBox.height) / 2
+        const maximum = Math.max(0, form.scrollHeight - form.clientHeight)
+        form.scrollTo({ top: Math.min(maximum, Math.max(0, centered)), behavior: 'smooth' })
+      }, 180)
+    }
+    const dialog = dialogRef.current
+    const appContent = dialog?.closest('.miniapp-shell')?.querySelector<HTMLElement>('.app-content')
+    const previousOverflow = appContent?.style.overflow
+    if (appContent) appContent.style.overflow = 'hidden'
+    syncViewport()
+    viewport?.addEventListener('resize', syncViewport)
+    window.addEventListener('orientationchange', syncViewport)
+    dialog?.addEventListener('focusin', keepFieldVisible)
+    return () => {
+      viewport?.removeEventListener('resize', syncViewport)
+      window.removeEventListener('orientationchange', syncViewport)
+      dialog?.removeEventListener('focusin', keepFieldVisible)
+      if (appContent) appContent.style.overflow = previousOverflow ?? ''
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    dialogRef.current?.querySelector('textarea')?.focus()
+    dialogRef.current?.querySelector('textarea')?.focus({ preventScroll: true })
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return
       const controls = dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, textarea')
@@ -84,7 +122,7 @@ export function TaskCreateSheet({ busy, requestMessage, open, onClose, onCreate,
   }
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
+    <div ref={backdropRef} className="sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
       <section ref={dialogRef} className="task-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="sheet-grabber" aria-hidden="true" />
         <header className="task-sheet__header">

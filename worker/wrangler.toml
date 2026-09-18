@@ -2,15 +2,18 @@ name = "truly-core"
 main = "src/index.ts"
 compatibility_date = "2026-09-16"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = false
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
-PAIRING_ORIGIN = "http://localhost:5173"
+ALLOWED_ORIGINS = "https://truly-core.truly-learning-app.workers.dev"
+PAIRING_ORIGIN = "https://truly-core.truly-learning-app.workers.dev"
 AI_PROVIDER = "groq"
 GROQ_MODEL = "qwen/qwen3.8-27b"
 GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
 GROQ_DATA_CONTROLS_CONFIRMED = "false"
 AI_DAILY_LIMIT = "100"
+REVIEWER_WALLETS = "NQ47GFC8SCHC7R9901CJY7971EMH22532AG1"
 NIM_PAYMENTS_ENABLED = "false"
 USDT_PAYMENTS_ENABLED = "false"
 USDT_MAINNET_APPROVED = "false"
@@ -18,5 +21,11 @@ USDT_MAINNET_APPROVED = "false"
 [[d1_databases]]
 binding = "DB"
 database_name = "truly-core"
-database_id = "replace-with-cloudflare-d1-id"
+database_id = "01df0367-3b66-4275-84a0-78f9b26dde24"
 migrations_dir = "../migrations"
+
+[assets]
+directory = "../apps/miniapp/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/v1/*", "/health"]

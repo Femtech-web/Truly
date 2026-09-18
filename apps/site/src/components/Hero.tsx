@@ -1,3 +1,5 @@
+const openInNimiqPay = 'https://nimpay.app/miniapps/open/truly-core.truly-learning-app.workers.dev'
+
 export function Hero() {
   return (
     <section id="top" className="hero shell">
@@ -11,11 +13,11 @@ export function Hero() {
           points to what matters, and helps you work through it without taking over.
         </p>
         <div className="hero-actions hero-enter hero-enter--actions">
-          <a className="button button--primary" href="#product">
-            See Truly in action <span aria-hidden="true">↓</span>
+          <a className="button button--primary" href={openInNimiqPay}>
+            Open in Nimiq Pay <span aria-hidden="true">→</span>
           </a>
-          <a className="button button--text" href="#approach">
-            How it teaches <span aria-hidden="true">→</span>
+          <a className="button button--text" href="#product">
+            See Truly in action <span aria-hidden="true">↓</span>
           </a>
         </div>
         <p className="hero-note hero-enter hero-enter--note">

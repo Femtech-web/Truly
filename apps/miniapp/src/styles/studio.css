@@ -1,6 +1,14 @@
 .studio-screen { display: grid; gap: 22px; }
 .studio-kicker { display: block; color: var(--teal-dark); font-size: 12px; font-weight: 700; margin-bottom: 8px; }
 .studio-sign-in { display: grid; gap: 16px; }
+.studio-publishing-guide { display: grid; gap: 14px; }
+.studio-publishing-guide h2 { font-size: 18px; }
+.studio-publishing-guide ol { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.studio-publishing-guide li { display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 11px; }
+.studio-publishing-guide li > span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: var(--teal-dark); background: var(--teal-soft); font-size: 11px; font-weight: 750; }
+.studio-publishing-guide li div { display: grid; gap: 3px; }
+.studio-publishing-guide strong { font-size: 13px; }
+.studio-publishing-guide p { font-size: 11px; line-height: 1.55; }
 .studio-address { overflow-wrap: anywhere; font-size: 12px; }
 .studio-profile summary { min-height: 44px; cursor: pointer; padding-block: 12px; font-weight: 700; }
 .studio-profile summary::marker { color: var(--teal-dark); }
@@ -20,7 +28,11 @@
 .studio-path-list span { font-size: 12px; color: var(--muted); }
 .studio-published { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
 .studio-published span { display: flex; align-items: center; gap: 6px; }
-.studio-editor { min-width: 0; }
+.studio-editor { min-width: 0; scroll-margin-top: 20px; }
+.studio-editor-intro, .studio-section-help, .studio-action-help { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.studio-editor-intro { margin-top: 12px; }
+.studio-section-help { margin-top: -4px; }
+.studio-action-help { margin-top: 18px; }
 .studio-fields { border: 0; padding: 0; margin: 20px 0; min-width: 0; }
 .studio-pair { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 .studio-fields label, .studio-profile label { display: grid; gap: 8px; }
@@ -54,4 +66,7 @@
 .review-decision .review-attestation { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; font-size: 13px; }
 .review-attestation input { width: 20px; min-height: 20px; flex-shrink: 0; accent-color: var(--teal); }
 .review-decision > p { font-size: 12px; color: var(--muted); }
+.review-checklist { margin-top: 22px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft); }
+.review-checklist h3 { font-size: 15px; }
+.review-checklist ol { display: grid; gap: 8px; margin: 12px 0 0; padding-left: 20px; color: var(--text); font-size: 12px; line-height: 1.55; }
 .learn-pane__heading { flex-wrap: wrap; }
