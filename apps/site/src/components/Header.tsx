@@ -40,7 +40,7 @@ export function Header({ page = 'home' }: HeaderProps) {
           <a href="/#product" onClick={closeMenu}>Product</a>
           <a href="/#nimiq" onClick={closeMenu}>Nimiq</a>
           <a href="/docs" aria-current={page === 'docs' ? 'page' : undefined} onClick={closeMenu}>Docs</a>
-          <a className="nav-cta" href="/#availability" onClick={closeMenu}>Download for macOS</a>
+          <a className="nav-cta" href="https://github.com/Femtech-web/Truly/releases/download/v0.1.0/Truly-0.1.0-macOS-universal.dmg" onClick={closeMenu}>Download for macOS</a>
         </div>
       </nav>
     </header>

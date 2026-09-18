@@ -125,7 +125,7 @@ Screens, raw model observations, learner notes and transcripts are not stored as
 
 Only a deliberate Ask, a completed opted-in voice question, or Check my work can send a bounded frame after the processor disclosure has been approved. Core authenticates the desktop, resolves the active Task and step, enforces size and usage limits, calls the configured model and validates structured output.
 
-Hands-free recognition uses Apple Speech on-device. Ambient recognition is not streamed to Core. A completed confident question sends its text with one current frame; uncertain speech opens for review. Spoken replies use the built-in macOS synthesizer and suspend wake listening during playback.
+Hands-free recognition uses Apple Speech on-device. Ambient recognition is not streamed to Core. A completed question captures one current frame locally and opens the recognized text for learner review; Core receives neither until the learner presses **Ask**. Spoken replies use the built-in macOS synthesizer and suspend wake listening during playback.
 
 The separate Record a question action captures bounded temporary audio for transcription. The Mac deletes the recording after reading it and Core does not persist the upload.
 

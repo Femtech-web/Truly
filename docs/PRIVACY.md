@@ -15,7 +15,7 @@ Truly is designed around deliberate capture, wallet-owned authority and minimal 
 
 Text and Voice are separate preferences. Voice requires macOS Microphone and Speech Recognition permission plus a local Truly opt-in.
 
-Hands-free recognition runs with Apple Speech on-device. Ambient audio and recognition text are not sent to Core. A completed confident question sends only the recognized question and one current frame through the same consented teaching endpoint. Uncertain recognition opens for review instead of inventing a question.
+Hands-free recognition runs with Apple Speech on-device. Ambient audio and recognition text are not sent to Core. A completed question captures one current frame locally and opens the recognized words for review. The question and frame are sent through the consented teaching endpoint only after the learner presses **Ask**.
 
 Listening stops during spoken playback, editing, Pause, Hide, Task changes, sleep, logout and privacy revocation. Voice begins paused after an app restart.
 

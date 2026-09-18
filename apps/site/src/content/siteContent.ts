@@ -25,8 +25,8 @@ export const frequentlyAskedQuestions = [
       'No. You can create a private Task or start a free Path. Creators can also price a reviewed Path in NIM; Truly shows the exact amount, Mainnet network, seller and recipient before Nimiq Pay asks for approval.',
   },
   {
-    question: 'When will the macOS app be available?',
+    question: 'How do I install the macOS app?',
     answer:
-      'The first native macOS learning loop is ready for local testing now. A public download will follow after capture, guidance, privacy controls, and recovery states have been tested across real Macs.',
+      'Download the universal .dmg, drag Truly into Applications, then Control-click Truly and choose Open for the first launch. This free direct-download build is not Apple-notarized, so macOS displays an unverified-developer warning.',
   },
 ]

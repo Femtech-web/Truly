@@ -81,6 +81,7 @@ struct TrulyRootView: View {
             !model.processorConsentGranted { return true }
         if case .failed = model.phase { return true }
         if case .failed = model.voiceState { return true }
+        if model.voiceState == .readyForReview { return true }
         if model.voiceState.isBusy { return true }
         return false
     }
@@ -122,6 +123,8 @@ struct TrulyRootView: View {
             compactNotice(message)
         } else if case .failed(let message) = model.voiceState {
             compactNotice(message)
+        } else if model.voiceState == .readyForReview {
+            compactNotice("Review what Truly heard, then press Ask.")
         } else if model.voiceState == .listening {
             HStack {
                 compactNotice("Listening… speak your question, then pause.")

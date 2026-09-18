@@ -6,6 +6,7 @@ enum VoiceInputState: Equatable {
     case requestingPermission
     case listening
     case transcribing
+    case readyForReview
     case failed(String)
 
     var isBusy: Bool { self == .requestingPermission || self == .listening || self == .transcribing }

@@ -6,6 +6,7 @@
   <p>
     <a href="https://www.usetruly.site/">Website</a> ·
     <a href="https://www.usetruly.site/docs">Product guide</a> ·
+    <a href="https://github.com/Femtech-web/Truly/releases/download/v0.1.0/Truly-0.1.0-macOS-universal.dmg">Download for macOS</a> ·
     <a href="https://nimpay.app/miniapps/open/app.usetruly.site">Open in Nimiq Pay</a> ·
     <a href="#how-truly-works">How it works</a> ·
     <a href="#why-nimiq">Why Nimiq</a> ·
@@ -111,9 +112,9 @@ Nimiq is the ownership and payment layer joining the entire product—not a chec
 
 Truly never receives wallet keys or recovery words. Nimiq Pay remains the source of truth for the complete portfolio and wallet history; Truly shows only the Path payments and access it has independently validated.
 
-## What building on Nimiq Pay surfaced
+## What building on Nimiq Pay surfaced — feedback for the Nimiq team
 
-Truly works within the current Mini App provider and fails closed when wallet authority is ambiguous. Building a multi-account product exposed a few places where the platform could become stronger:
+This section is direct product and SDK feedback for the **Nimiq Pay and Mini Apps team**, based on building and physically testing Truly inside Nimiq Pay. Truly works within the current provider and fails closed when wallet authority is ambiguous; the points below are concrete integration boundaries we encountered and the platform capabilities that would make those user flows clearer and safer:
 
 | Current boundary | What would improve the developer and user experience |
 | --- | --- |
@@ -185,6 +186,12 @@ flowchart TB
 Authority is intentionally split. The wallet approves identity, devices and payments. The Mac owns deliberate capture and the learning interaction. Core is the only component allowed to combine owner identity, device authority, immutable content, verified payment access and current progress.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full boundaries and data flows.
+
+## Install Truly for macOS
+
+Download [Truly 0.1.0 for macOS](https://github.com/Femtech-web/Truly/releases/download/v0.1.0/Truly-0.1.0-macOS-universal.dmg), open the DMG and drag Truly into Applications. The universal build supports Apple Silicon and Intel Macs running macOS 14.2 or newer.
+
+This free direct-download release is ad-hoc signed rather than Apple-notarized. On first launch, Control-click **Truly** in Applications, choose **Open**, then confirm **Open**. If macOS still blocks it, use **System Settings → Privacy & Security → Open Anyway**. Never disable Gatekeeper globally. See the [installation guide](apps/desktop/INSTALL.md).
 
 ## Run Truly locally
 

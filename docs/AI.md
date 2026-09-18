@@ -34,7 +34,7 @@ The learner reviews and can edit a private plan before starting. Once work has b
 
 ## Voice
 
-Hands-free **Hey Truly** recognition uses Apple Speech on-device. Ambient audio and recognition text are not uploaded. A completed confident question invokes the same deliberate screen-aware teaching request; uncertain speech opens for review.
+Hands-free **Hey Truly** recognition uses Apple Speech on-device. Ambient audio and recognition text are not uploaded. A completed question opens the recognized words with one locally captured frame for review; the screen-aware teaching request begins only after the learner presses **Ask**.
 
 **Record a question** is a separate user action that sends bounded temporary audio through Core for transcription. The Mac deletes its local recording after reading it, and Core does not persist the upload. Spoken replies use the built-in macOS synthesizer, with wake listening suspended during playback.
 

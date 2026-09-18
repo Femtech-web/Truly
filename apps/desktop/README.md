@@ -22,7 +22,7 @@ Practice lives in **Open Task → Overview → Check my work**, not the Explain/
 4. Click the companion. Allow Screen Recording when requested; enable Truly in macOS Privacy & Security and restart through Xcode if required.
 5. Close the workspace, bring your learning context forward, then click the companion again.
 6. Use the menu-bar icon → Settings → Connection to pair this Mac. Start a Task or Path from the Mini App on your phone.
-7. To try hands-free input: allow AI help in Settings → Privacy, close the typed bar, select Input → Voice, enable local listening and allow macOS Microphone/Speech Recognition. Say **Hey Truly, explain this page** and pause. Uncertain recognition opens for review. Select Pause to stop listening; Reply chooses Text or Spoken. Local support must be checked on the actual Mac.
+7. To try hands-free input: allow AI help in Settings → Privacy, close the typed bar, select Input → Voice, enable local listening and allow macOS Microphone/Speech Recognition. Say **Hey Truly, explain this page** and pause. Truly captures the chosen screen, opens the recognized question for review, and sends nothing until you press **Ask**. Select Pause to stop listening; Reply chooses Text or Spoken. Local support must be checked on the actual Mac.
 
 Settings → Connection names the active Core environment. The committed desktop build uses **Production Core · app.usetruly.site**. A pairing code exists only in the Core that created it, so a local desktop code cannot be entered into the production Mini App, and a production code cannot be entered into a local Mini App. Stop and rerun Truly through Xcode after changing endpoint configuration; an already running build retains the `Info.plist` compiled into its app bundle.
 

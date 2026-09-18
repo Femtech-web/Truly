@@ -25,4 +25,5 @@ DerivedData/
 
 # Generated desktop artifacts.
 build/
+release-build/
 releases/

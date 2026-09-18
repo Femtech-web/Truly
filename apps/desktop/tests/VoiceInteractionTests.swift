@@ -17,6 +17,42 @@ struct VoiceInteractionTests {
         for (input, expected) in examples {
             precondition(TrulyWakePhrase.question(in: input) == expected, "Wake boundary failed")
         }
+        precondition(TrulyVoiceTranscriptPolicy.question(in: "Hey Truly", questionOnly: false) == "")
+        precondition(TrulyVoiceTranscriptPolicy.shouldContinueWithQuestionOnly(
+            question: "", isFinal: true, questionOnly: false
+        ))
+        precondition(TrulyVoiceTranscriptPolicy.question(
+            in: "what should I do next?", questionOnly: true
+        ) == "what should I do next?")
+        precondition(!TrulyVoiceTranscriptPolicy.shouldContinueWithQuestionOnly(
+            question: "explain this", isFinal: true, questionOnly: false
+        ))
+        precondition(TrulyVoiceTranscriptPolicy.question(in: "background speech", questionOnly: false) == nil)
+        let latchedWakeWords = TrulyVoiceTranscriptPolicy.wakeBoundaryWordCount(in: "Hey Truly")
+        precondition(latchedWakeWords == 2)
+        precondition(TrulyVoiceTranscriptPolicy.question(
+            in: "Hey Trudy what am I doing here", afterWakeWordCount: latchedWakeWords
+        ) == "what am I doing here")
+        let embeddedWakeWords = TrulyVoiceTranscriptPolicy.wakeBoundaryWordCount(
+            in: "background speech hey truly"
+        )
+        precondition(embeddedWakeWords == 4)
+        precondition(TrulyVoiceTranscriptPolicy.question(
+            in: "background speech hey trudy explain this", afterWakeWordCount: embeddedWakeWords
+        ) == "explain this")
+        precondition(TrulyVoiceTurnPolicy.action(
+            question: "", isFinal: false, secondsSinceWake: 0.2, secondsSinceAudibleSpeech: 0.2
+        ) == .wait)
+        precondition(TrulyVoiceTurnPolicy.action(
+            question: "", isFinal: false, secondsSinceWake: 1.25, secondsSinceAudibleSpeech: 0.1
+        ) == .wait)
+        precondition(TrulyVoiceTurnPolicy.action(
+            question: "", isFinal: false, secondsSinceWake: 1.25, secondsSinceAudibleSpeech: 0.6
+        ) == .finalizeCurrentSegment)
+        precondition(TrulyVoiceTurnPolicy.action(
+            question: "what am I doing here", isFinal: false,
+            secondsSinceWake: 1.25, secondsSinceAudibleSpeech: 0.6
+        ) == .wait)
         precondition(LearningMode.allCases.map(\.rawValue) == ["Explain", "Guide"])
         precondition(TrulyInputMode.allCases.map(\.rawValue) == ["Text", "Voice"])
         precondition(TrulyWakePhrase.teachingMode(for: "Please guide me through this") == .guide)
@@ -51,6 +87,11 @@ struct VoiceInteractionTests {
         precondition(TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: true, phase: .failed("offline")))
         precondition(!TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: false, phase: .failed("offline")))
         precondition(!TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: true, phase: .responding))
-        print("37 voice/input boundary checks passed")
+        precondition(TrulyTransientNetworkPolicy.shouldRetry(URLError(.timedOut), attempt: 0))
+        precondition(TrulyTransientNetworkPolicy.shouldRetry(URLError(.networkConnectionLost), attempt: 0))
+        precondition(TrulyTransientNetworkPolicy.shouldRetry(URLError(.cannotConnectToHost), attempt: 0))
+        precondition(!TrulyTransientNetworkPolicy.shouldRetry(URLError(.timedOut), attempt: 1))
+        precondition(!TrulyTransientNetworkPolicy.shouldRetry(URLError(.badURL), attempt: 0))
+        print("56 voice/input/network boundary checks passed")
     }
 }

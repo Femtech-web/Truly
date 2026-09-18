@@ -140,7 +140,8 @@ export function DocsPage() {
                 { place: 'Mac', title: 'Choose Voice input', detail: <>Click the Truly menu icon and set <strong>Input</strong> to <strong>Voice</strong>. Allow Microphone and Speech Recognition if macOS asks.</> },
                 { place: 'Mac', title: 'Choose how Truly replies', detail: <>Set <strong>Reply</strong> to <strong>Text</strong> for an on-screen answer or <strong>Spoken</strong> to hear the answer aloud.</> },
                 { place: 'Mac', title: 'Start wake listening', detail: <>Click <strong>Resume</strong>. Truly now listens locally for the wake phrase; it has not sent a recording to the cloud.</> },
-                { place: 'Mac', title: 'Ask the question', detail: <>Say <strong>“Hey Truly”</strong>, wait for the listening cue, then say your full question. Finishing the question sends that requested audio for transcription and shares one fresh screen.</> },
+                { place: 'Mac', title: 'Ask the question', detail: <>Say <strong>“Hey Truly” once</strong>, then ask the full question—do not repeat the wake phrase. You can say both as one natural sentence. The small indicator changes when the wake phrase is recognized; Truly finishes processing the words it already heard before starting another local question segment if needed.</> },
+                { place: 'Mac', title: 'Review and send', detail: <>Stop speaking after the question. Truly captures one fresh screen and opens the recognized words in the question box. Correct anything it misheard, then click <strong>Ask</strong>. Nothing is sent merely because the recognizer was confident.</> },
                 { place: 'Mac', title: 'Pause listening', detail: <>Click <strong>Pause</strong> whenever you do not want wake listening. Hiding the companion also stops listening.</> },
                 { place: 'Mac', title: 'Record without the wake phrase', detail: <>For one deliberate recording, click <strong>Record a question</strong>, speak, then finish. This sends only that requested question and does not enable ongoing wake listening.</> },
               ]} />
@@ -207,7 +208,7 @@ export function DocsPage() {
             <details><summary>A payment is pending</summary><p>Return to the Path and tap <strong>Check payment</strong>. Do not create a second payment. Nimiq Pay remains the source of truth for the transaction and complete wallet balance.</p></details>
             <details><summary>My progress did not change</summary><p>Asking Truly a question does not complete a step. On the Mac, choose <strong>Open Task → Check my work</strong>, pass every visible criterion, then open <strong>Progress</strong> on the phone and refresh.</p></details>
             <details><summary>Why can’t I change a submitted Path?</summary><p>The reviewer must see the exact revision that could become public. Wait for approval or requested changes. A rejected draft can be revised or deleted from its editor.</p></details>
-            <details><summary>How is the macOS app installed?</summary><p>Download the .dmg from Truly’s website, open it, drag Truly into Applications, then launch it. Public releases are distributed directly rather than through the Mac App Store.</p></details>
+            <details><summary>How is the macOS app installed?</summary><p>Download the .dmg from Truly’s website, open it and drag Truly into Applications. On the first launch, Control-click Truly, choose <strong>Open</strong>, then confirm. This free direct-download build is not Apple-notarized, so macOS displays an unverified-developer warning.</p></details>
           </section>
         </div>
       </div>

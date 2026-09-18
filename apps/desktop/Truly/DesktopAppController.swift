@@ -59,7 +59,7 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
             }
         }
         voice.onWake = { [weak self] in self?.voiceFocus = NSEvent.mouseLocation }
-        voice.onQuestion = { [weak self] text, review in self?.askByVoice(text, requiresReview: review) }
+        voice.onQuestion = { [weak self] text, _ in self?.askByVoice(text) }
         voice.onStateChanged = { [weak self] state in self?.companion.setVoiceState(state) }
         learning.$phase.combineLatest(learning.$processorConsentGranted, learning.$voiceState)
             .sink { [weak self] phase, _, _ in
@@ -201,7 +201,7 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
         voiceAnswerPending = false
     }
 
-    private func askByVoice(_ text: String, requiresReview: Bool) {
+    private func askByVoice(_ text: String) {
         guard inputMode == .voice, !voicePaused, companionVisible, pairing.state == .paired,
               learning.processorConsentGranted, let session = learning.activeLearningSession, session.status == "active" else { voice.stop(); return }
         let interaction = voiceInteraction
@@ -213,18 +213,18 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
             await learning.shareContext(at: point, appName: appName)
             guard !Task.isCancelled, interaction == voiceInteraction, !voicePaused,
                   inputMode == .voice, companionVisible, pairing.state == .paired,
-                  learning.activeLearningSession?.id == session.id, learning.processorConsentGranted else { return }
+                  learning.activeLearningSession?.id == session.id, learning.processorConsentGranted else {
+                voiceQuestionInFlight = false
+                reconcileVoice()
+                return
+            }
             learning.question = text
             if let mode = TrulyWakePhrase.teachingMode(for: text) { learning.selectedMode = mode }
             voiceQuestionInFlight = false
-            if requiresReview || learning.capturedScreen == nil {
-                learning.voiceState = .failed("Check what Truly heard, then press Ask—or try saying it again.")
-                presentWorkspace()
-            }
-            else {
-                voiceAnswerPending = true
-                learning.submitQuestion()
-            }
+            // Speech recognition is never an implicit send. Always let the learner see and
+            // correct the on-device transcript before one screen and the question leave the Mac.
+            learning.voiceState = .readyForReview
+            presentWorkspace()
             reconcileVoice()
         }
     }

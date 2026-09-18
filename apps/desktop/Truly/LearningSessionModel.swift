@@ -165,6 +165,9 @@ final class LearningSessionModel: ObservableObject {
                          focus: capturedFocus.map { .init(x: Double($0.x), y: Double($0.y)) }),
             consent: .init(processor: "groq", revision: Self.processorConsentRevision, approved: true)
         )
+        // A reviewed spoken transcript becomes an ordinary deliberate Ask at this boundary.
+        // Clear the review marker so hands-free listening can resume after the answer.
+        voiceState = .idle
         phase = .responding
         response = ""
         Task {
@@ -410,22 +413,37 @@ private struct LearningTurnService {
         request.httpBody = try JSONEncoder().encode(body)
         request.timeoutInterval = 25
 
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { throw LearningTurnError.invalidResponse }
-            guard (200..<300).contains(http.statusCode) else {
-                let problem = try? JSONDecoder().decode(ProblemResponse.self, from: data)
-                throw LearningTurnError.server(problem?.error.message ?? "Truly could not inspect this frame. Try again.")
+        for attempt in 0...1 {
+            do {
+                let (data, response) = try await data(for: request, retrying: attempt > 0)
+                guard let http = response as? HTTPURLResponse else { throw LearningTurnError.invalidResponse }
+                guard (200..<300).contains(http.statusCode) else {
+                    let problem = try? JSONDecoder().decode(ProblemResponse.self, from: data)
+                    throw LearningTurnError.server(problem?.error.message ?? "Truly could not inspect this frame. Try again.")
+                }
+                let turn = try JSONDecoder().decode(LearningTurnResponse.self, from: data)
+                guard turn.progressRecorded == false else { throw LearningTurnError.invalidResponse }
+                return turn
+            } catch let error as LearningTurnError {
+                throw error
+            } catch is DecodingError {
+                throw LearningTurnError.invalidResponse
+            } catch {
+                if TrulyTransientNetworkPolicy.shouldRetry(error, attempt: attempt) { continue }
+                throw LearningTurnError.server("Truly could not connect. Your progress was not changed; try again.")
             }
-            let turn = try JSONDecoder().decode(LearningTurnResponse.self, from: data)
-            guard turn.progressRecorded == false else { throw LearningTurnError.invalidResponse }
-            return turn
-        } catch let error as LearningTurnError {
-            throw error
-        } catch is DecodingError {
-            throw LearningTurnError.invalidResponse
-        } catch {
-            throw LearningTurnError.server("Truly could not connect. Your progress was not changed; try again.")
         }
+        throw LearningTurnError.server("Truly could not connect. Your progress was not changed; try again.")
+    }
+
+    private func data(for request: URLRequest, retrying: Bool) async throws -> (Data, URLResponse) {
+        guard retrying else { return try await URLSession.shared.data(for: request) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = request.timeoutInterval
+        configuration.timeoutIntervalForResource = request.timeoutInterval + 5
+        configuration.waitsForConnectivity = false
+        let session = URLSession(configuration: configuration)
+        defer { session.finishTasksAndInvalidate() }
+        return try await session.data(for: request)
     }
 }

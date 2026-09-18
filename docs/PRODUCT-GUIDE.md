@@ -67,8 +67,8 @@ Text mode does not listen to the microphone. Truly does not keep watching the sc
 2. Allow Microphone and Speech Recognition if macOS asks.
 3. Set **Reply** to **Text** for an on-screen answer or **Spoken** to hear it aloud.
 4. If the menu says **Voice paused**, click **Resume**. The status changes to **Say ‘Hey Truly’**.
-5. Say **“Hey Truly”**, wait for the listening cue, then say the full question.
-6. Stop speaking. Truly finishes after the brief silence, writes down the question and sends one fresh screen with it.
+5. Say **“Hey Truly” once**, then ask the full question—do not repeat the wake phrase. You can say both as one natural sentence. The small indicator changes when the wake phrase is recognized; Truly finishes processing the words it already heard before starting another local question segment if needed.
+6. Stop speaking after the question. Truly captures one fresh screen and opens the recognized words in the question box. Correct anything it misheard, then press **Ask**. Nothing is sent merely because the recognizer was confident; ambient audio is not uploaded.
 7. Click **Pause** whenever wake listening should stop. Hiding the companion also stops it.
 
 For one deliberate recording without the wake phrase, click **Record a question**, speak, then finish. Only that requested recording is sent for transcription.

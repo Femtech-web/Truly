@@ -39,6 +39,10 @@ final class LocalVoiceService: ObservableObject {
     private var generation = UUID()
     private var question = ""
     private var needsReview = false
+    private var questionOnly = false
+    private var wakeNeedsReview = false
+    private var wakeBoundaryWordCount: Int?
+    private var wakeDetectedAt = Date.distantPast
     private var lastAudibleSpeech = Date.distantPast
     private var finishing = false
     private var finalTimer: Task<Void, Never>?
@@ -74,7 +78,8 @@ final class LocalVoiceService: ObservableObject {
         generation = UUID()
         permissionTask?.cancel(); permissionTask = nil
         releaseAudio()
-        question = ""; needsReview = false; finishing = false
+        question = ""; needsReview = false; questionOnly = false; wakeNeedsReview = false
+        wakeBoundaryWordCount = nil; wakeDetectedAt = .distantPast; finishing = false
         setState(state)
     }
 
@@ -83,19 +88,24 @@ final class LocalVoiceService: ObservableObject {
         onStateChanged?(value)
     }
 
-    private func beginSegment() {
+    private func beginSegment(questionOnly: Bool = false) {
         guard let recognizer, recognizer.supportsOnDeviceRecognition, recognizer.isAvailable else {
             stop(as: .unavailable("Hands-free voice is unavailable on this Mac. Use Text mode or Record a question.")); return
         }
-        releaseAudio()
         generation = UUID()
         let generation = self.generation
+        releaseAudio()
+        self.questionOnly = questionOnly
         question = ""; needsReview = false
+        if !questionOnly {
+            wakeNeedsReview = false; wakeBoundaryWordCount = nil; wakeDetectedAt = .distantPast
+        }
         finishing = false
+        lastAudibleSpeech = Date.distantPast
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.requiresOnDeviceRecognition = true
         request.shouldReportPartialResults = true
-        request.contextualStrings = ["Hey Truly"]
+        if !questionOnly { request.contextualStrings = ["Hey Truly"] }
         self.request = request
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
@@ -120,30 +130,38 @@ final class LocalVoiceService: ObservableObject {
             // Only an explicitly activated question is retained beyond this callback.
             let transcript = result?.bestTranscription.formattedString
             let text = transcript ?? ""
-            let spokenQuestion = TrulyWakePhrase.question(in: text)
-            let questionStart = text.utf16.count - (spokenQuestion?.utf16.count ?? 0)
+            let spokenQuestion = TrulyVoiceTranscriptPolicy.question(in: text, questionOnly: questionOnly)
+            let detectedWakeWordCount = questionOnly ? nil : TrulyVoiceTranscriptPolicy.wakeBoundaryWordCount(in: text)
+            let questionStart = questionOnly ? 0 : text.utf16.count - (spokenQuestion?.utf16.count ?? 0)
             let final = result?.isFinal ?? false
             let segments = result?.bestTranscription.segments ?? []
-            let wakeRange = TrulyWakePhrase.range(in: text).map { NSRange($0, in: text) }
+            let wakeRange = questionOnly ? nil : TrulyWakePhrase.range(in: text).map { NSRange($0, in: text) }
             let wakeConfidences = segments.filter { segment in
                 guard let wakeRange else { return false }
                 return NSIntersectionRange(segment.substringRange, wakeRange).length > 0
             }.map(\.confidence)
-            let questionConfidences = segments.filter { $0.substringRange.location >= questionStart }.map(\.confidence)
-            let uncertain = TrulyVoiceRecognitionPolicy.requiresReview(isFinal: final, wakeConfidences: wakeConfidences,
-                                                                         questionConfidences: questionConfidences)
+            let questionConfidences = spokenQuestion == nil && !questionOnly
+                ? segments.map(\.confidence)
+                : segments.filter { $0.substringRange.location >= questionStart }.map(\.confidence)
+            let wakeUncertain = TrulyVoiceRecognitionPolicy.hasUncertainConfidence(wakeConfidences)
+            let questionUncertain = !final || TrulyVoiceRecognitionPolicy.hasUncertainConfidence(questionConfidences)
             let failed = error != nil
             let hadResult = result != nil
             Task { @MainActor [weak self] in
                 guard let self, generation == self.generation else { return }
-                if hadResult { receive(spokenQuestion, final: final, uncertain: uncertain) }
+                if hadResult {
+                    receive(transcript: text, spokenQuestion: spokenQuestion,
+                            detectedWakeWordCount: detectedWakeWordCount,
+                            final: final, wakeUncertain: wakeUncertain,
+                            questionUncertain: questionUncertain, questionOnly: questionOnly)
+                }
                 guard generation == self.generation else { return }
                 if failed && !finishing { stop(as: .unavailable("Voice stopped. Resume voice to try again, or use Text mode.")) }
             }
         }
         do { engine.prepare(); try engine.start() }
         catch { stop(as: .unavailable("Truly could not start the microphone. Use Text mode and try again later.")); return }
-        setState(.armed)
+        setState(questionOnly ? .listening : .armed)
         segmentTimer = Task { [weak self] in
             try? await Task.sleep(for: .seconds(45))
             guard !Task.isCancelled, let self, generation == self.generation else { return }
@@ -151,22 +169,28 @@ final class LocalVoiceService: ObservableObject {
         }
     }
 
-    private func receive(_ spokenQuestion: String?, final: Bool, uncertain: Bool) {
+    private func receive(transcript: String, spokenQuestion: String?, detectedWakeWordCount: Int?,
+                         final: Bool, wakeUncertain: Bool, questionUncertain: Bool,
+                         questionOnly: Bool) {
         guard state == .armed || state == .listening || finishing else { return }
-        if TrulyVoiceRecognitionPolicy.discardsCorrectedWake(question: spokenQuestion, isFinal: final) {
-            // Discard even when the silence timer has begun finalization.
-            question = ""; needsReview = false
-            beginSegment()
-            return
+        if !questionOnly, let detectedWakeWordCount {
+            wakeBoundaryWordCount = detectedWakeWordCount
         }
-        if spokenQuestion == nil && (state == .listening || finishing) {
-            question = ""; needsReview = true
+        let resolvedQuestion: String?
+        if let spokenQuestion { resolvedQuestion = spokenQuestion }
+        else if !questionOnly, state == .listening || finishing {
+            resolvedQuestion = TrulyVoiceTranscriptPolicy.question(
+                in: transcript, afterWakeWordCount: wakeBoundaryWordCount
+            )
+        } else { resolvedQuestion = nil }
+        if resolvedQuestion == nil && (state == .listening || finishing) {
             if !finishing { armSilenceTimer() }
         }
-        if let spokenQuestion {
+        if let spokenQuestion = resolvedQuestion {
             if state == .armed {
                 setState(.listening)
                 lastAudibleSpeech = Date()
+                wakeDetectedAt = Date()
                 onWake?()
                 // Bound the utterance from wake detection, independent of recognizer restarts.
                 segmentTimer?.cancel()
@@ -177,6 +201,14 @@ final class LocalVoiceService: ObservableObject {
                     finishQuestion()
                 }
             }
+            if !questionOnly, detectedWakeWordCount != nil { wakeNeedsReview = wakeUncertain }
+            if TrulyVoiceTranscriptPolicy.shouldContinueWithQuestionOnly(
+                question: spokenQuestion, isFinal: final, questionOnly: questionOnly
+            ) {
+                beginSegment(questionOnly: true)
+                return
+            }
+            let uncertain = wakeNeedsReview || questionUncertain
             if spokenQuestion != question || silenceTimer == nil {
                 question = spokenQuestion
                 needsReview = uncertain
@@ -189,13 +221,20 @@ final class LocalVoiceService: ObservableObject {
     private func armSilenceTimer() {
         silenceTimer?.cancel()
         let generation = self.generation
-        let delay: Double = question.isEmpty ? 8 : 1.6
+        let delay = question.isEmpty ? TrulyVoiceTurnPolicy.wakeOnlyGraceSeconds : 1.6
         silenceTimer = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(delay))
                 guard !Task.isCancelled, let self, generation == self.generation else { return }
                 // Partial recognition may pause during a long phrase; don't cut off audible speech.
-                if question.isEmpty || Date().timeIntervalSince(lastAudibleSpeech) >= 1.6 {
+                let wakeAction = TrulyVoiceTurnPolicy.action(
+                    question: question,
+                    isFinal: false,
+                    secondsSinceWake: Date().timeIntervalSince(wakeDetectedAt),
+                    secondsSinceAudibleSpeech: Date().timeIntervalSince(lastAudibleSpeech)
+                )
+                if wakeAction == .finalizeCurrentSegment ||
+                    (!question.isEmpty && Date().timeIntervalSince(lastAudibleSpeech) >= 1.6) {
                     finishQuestion(); return
                 }
             }
