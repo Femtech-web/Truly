@@ -2,7 +2,7 @@
   <img src="apps/desktop/Truly/Assets.xcassets/AppIcon.appiconset/128.png" width="88" height="88" alt="Truly app icon" />
   <h1>Truly</h1>
   <p><strong>Learn anything. By doing it.</strong></p>
-  <p>Truly is a learning-by-doing Mini App built on Nimiq. Choose a goal or creator-made Path on your phone, continue beside the real work on your Mac, and save progress only after showing what you completed.</p>
+  <p>Truly pairs a Nimiq Mini App with an AI learning companion for macOS. Choose a goal or creator-made Path on your phone, continue beside the real work on your Mac, and save progress only after showing what you completed.</p>
   <p>
     <a href="https://www.usetruly.site/">Website</a> ·
     <a href="https://www.usetruly.site/docs">Product guide</a> ·
