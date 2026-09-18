@@ -22,7 +22,7 @@ export const frequentlyAskedQuestions = [
   {
     question: 'Do I need to pay to start learning?',
     answer:
-      'No. You can create a private Task or start a free Path. Creators can also price a reviewed Path in NIM; Truly shows the exact amount, network, seller and recipient before Nimiq Pay asks for approval. Purchases currently use Testnet NIM, which has no real-world value.',
+      'No. You can create a private Task or start a free Path. Creators can also price a reviewed Path in NIM; Truly shows the exact amount, Mainnet network, seller and recipient before Nimiq Pay asks for approval.',
   },
   {
     question: 'When will the macOS app be available?',

@@ -1,65 +1,158 @@
-# How Truly works
+# How to use Truly
 
-Truly connects your phone, Nimiq wallet and Mac so learning can stay beside the real work. This guide explains the product as a learner or creator sees it. For implementation details, see the [architecture](ARCHITECTURE.md).
+Truly connects a learner’s phone, Nimiq wallet and Mac so learning can stay beside the real work. This is the product-facing guide. For implementation details, see the [architecture](ARCHITECTURE.md).
 
-> Path payments currently use Nimiq Testnet. Test NIM has no real-world value.
+> Paid NIM Paths use Nimiq Mainnet. Nimiq Pay shows the real-NIM amount and recipient before approval; USDT is not available.
 
-## Start a learning session
+## Connect your wallet
 
-1. **Connect through Nimiq Pay.** Create or import a wallet inside Nimiq Pay, then choose the account you want Truly to use. Truly never asks for recovery words and does not accept a pasted address as proof of ownership.
-2. **Pair your Mac.** Open Truly on the Mac, enter its short code from the Devices screen and approve the exact pairing request with your wallet.
-3. **Choose what to learn.** Start a private Task from your own goal, or choose a creator-made Path.
-4. **Continue on the Mac.** Select the paired Mac. If the companion is hidden, it stays hidden and a compact Task-ready notice appears instead.
-5. **Learn beside the work.** Place the companion near anything visible. Type or speak a question; Truly can answer on screen or speak back.
-6. **Check your work.** For a practice step, open the Task and choose **Check my work**. Truly assesses a fresh view against the saved visible criteria and updates progress only when every criterion is met.
+1. On your phone, open **Nimiq Pay**.
+2. Open **Mini Apps**, then open **Truly**.
+3. Tap **Connect** in the top-right.
+4. Tap **Connect through Nimiq Pay**.
+5. Approve the primary signing account shown by Nimiq Pay.
 
-## Tasks and Paths
+Truly receives the public address. It never asks for recovery words or private keys, and it does not treat a pasted address as proof of ownership.
 
-### A Task starts with you
+## Pair your Mac
 
-Describe an immediate goal, review the suggested steps and edit the plan before starting. The Task is private, free and owned by your connected wallet. Saved progress is available from the phone and paired Mac.
+1. Launch Truly on the Mac.
+2. Click the Truly ring-and-dot icon in the macOS menu bar.
+3. Click **Settings…**.
+4. Open **Connection**.
+5. Click **Pair this Mac** and leave the six-character code visible. The code expires after five minutes.
+6. On the phone, open Truly and tap **Devices** in the bottom navigation.
+7. Type the same six-character code and tap **Verify code**.
+8. Check the Mac name and system shown in the preview.
+9. Tap **Approve and pair Mac**.
+10. Approve the pairing signature in Nimiq Pay. This cannot move funds.
+11. Return to Truly and confirm the Mac appears under **Connected Macs**.
 
-### A Path starts with a creator
+## Start a private Task
 
-A Path contains ordered steps, explanations, useful links, challenges and visible completion criteria. A creator can make it free or set a NIM price. Starting a Path creates your own progress-bearing Task while keeping the approved creator version unchanged.
+1. On the phone, tap **Learn**.
+2. Select **My Tasks** and tap **New Task**.
+3. Describe one clear thing you want to learn or finish.
+4. Review the suggested plan. Open the Task and choose **Edit plan** if any step should change.
+5. Tap **Start on my Mac**.
+6. Select the paired Mac that should receive the Task.
+7. Wait for **Loaded in Truly on [Mac name]** before leaving the page.
 
-## Paid Paths
+## Start a creator Path
 
-Truly shows the Path version, exact NIM amount, network, creator and recipient before Nimiq Pay asks for approval. Nimiq Pay sends the transaction; Truly never handles wallet keys. Access is granted only after Truly Core independently verifies the settled transfer.
+1. On the phone, tap **Learn**.
+2. Select **Explore Paths** and open a Path.
+3. Read the outcome, requirements, steps, creator and access terms.
+4. Complete the NIM checkout first if the Path is paid.
+5. Tap **Start or continue on my Mac**.
+6. Select a paired Mac and wait for **Loaded in Truly on [Mac name]**.
 
-Nimiq Pay remains the source of truth for the complete wallet balance and transaction history. Truly shows only the Path payments and access it has validated itself.
+A Path contains ordered steps, explanations, resources, practice challenges and visible completion criteria. Starting one creates the learner’s own progress-bearing Task without changing the approved creator version.
 
-## Create a Path
+## Ask Truly with text
 
-Any non-suspended Nimiq wallet can approve Creator Studio and create a public creator profile.
+1. On the Mac, click the Truly menu-bar icon.
+2. Set **Input** to **Text**.
+3. Choose **Show companion** if the companion is hidden.
+4. Drag the companion near the code, page, design or control you mean.
+5. Click the companion, or click **Ask Truly** in the menu.
+6. Type into **Ask about what you shared…** and press Return or click **Ask**.
+7. Truly captures one fresh screen and writes the answer in the companion.
+
+Text mode does not listen to the microphone. Truly does not keep watching the screen after the requested capture.
+
+## Ask Truly with voice
+
+1. Click the Truly menu-bar icon and set **Input** to **Voice**.
+2. Allow Microphone and Speech Recognition if macOS asks.
+3. Set **Reply** to **Text** for an on-screen answer or **Spoken** to hear it aloud.
+4. If the menu says **Voice paused**, click **Resume**. The status changes to **Say ‘Hey Truly’**.
+5. Say **“Hey Truly”**, wait for the listening cue, then say the full question.
+6. Stop speaking. Truly finishes after the brief silence, writes down the question and sends one fresh screen with it.
+7. Click **Pause** whenever wake listening should stop. Hiding the companion also stops it.
+
+For one deliberate recording without the wake phrase, click **Record a question**, speak, then finish. Only that requested recording is sent for transcription.
+
+## Check your work
+
+Asking a question never completes a step. Assessment is a separate, deliberate action.
+
+1. Complete the practice in your own browser, editor or application.
+2. Keep the result readable on screen. Show your work, not only the instructions or a tutorial.
+3. Click the Truly menu-bar icon and choose **Open Task**.
+4. Read the current **Practice goal** and every visible completion criterion.
+5. Arrange the screen so the evidence is visible, then click **Check my work**.
+6. If Truly identifies missing evidence, correct the work and check again.
+7. After a pass, open **Progress** on the phone and refresh if needed.
+8. Confirm that the completed-step count increased.
+
+AI-checked progress is useful feedback, not certification.
+
+## Unlock a paid Path
+
+1. Open the Path from **Learn → Explore Paths**.
+2. Scroll to **Unlock this Path**.
+3. Tap **Approve purchase access** and approve the short sign-in. This does not send NIM.
+4. Tap **Review purchase**.
+5. Check the Path version, seller, exact NIM amount, Mainnet network and recipient.
+6. Tick the Mainnet confirmation and tap **Pay [amount] NIM**.
+7. Approve the same amount and recipient in Nimiq Pay.
+8. Return to Truly. If the transfer is pending, tap **Check payment**; do not pay again.
+9. Continue after Truly shows **Path unlocked**.
+
+Nimiq Pay remains the source of truth for the complete balance and transaction history. Truly records only the Path payments and access it independently validates.
+
+## Create and publish a Path
 
 1. Open **Learn → Explore Paths → Create Path**.
-2. Approve the creator sign-in. It cannot send money or publish without review.
-3. Build a private draft with outcomes, requirements, tools, ordered steps, resources, practice goals and completion criteria.
-4. Choose **Free** or **Paid with NIM**. NIM payments go to the creator’s verified wallet identity.
-5. Preview the learner view, save, then submit the exact version for review.
-6. An authorized reviewer exercises the Path and either publishes it or returns notes.
+2. Tap **Approve Creator Studio** and approve the sign-in in Nimiq Pay. It is not a payment.
+3. Add a public creator name and bio, then tap **Save profile**.
+4. Tap **New Path**.
+5. Complete the title, public Path link, summary, description, subject, language, duration, outcomes and tools or environments.
+6. Tap **Add step**. Give every step instructions, a concrete practice challenge and visible completion criteria.
+7. Add resources where useful. Use the arrow buttons to reorder steps or resources.
+8. Select **Free** or **Paid with NIM**. Paid proceeds go to the verified wallet shown on the creator profile.
+9. Tap **Save draft**, then **Preview**. Follow the whole route yourself.
+10. Tap **Back to editor** to correct anything unclear.
+11. Tap **Submit for review**. Fix any missing fields shown beside the action.
+12. Confirm the Path changes to **In review**. The submitted revision stays private and locked until a reviewer approves it or requests changes.
 
-A private or rejected draft can be deleted from its editor. Submitted snapshots stay locked during review. An approved update creates a new version; learners already using the Path keep the version they started.
+A private or rejected draft can be deleted from its editor. An approved update creates a new version; learners already using the Path keep the version they started.
 
 ## What Truly can see
 
-- A screen is captured only when you deliberately ask, complete an enabled voice question or choose **Check my work**.
+- A screen is captured only when the learner deliberately asks a screen-aware question, completes an enabled voice question or chooses **Check my work**.
 - Truly does not keep a screenshot or microphone-recording history.
-- Voice input is separately optional. Local wake listening pauses during spoken replies and starts paused after a restart.
-- AI-checked progress is useful feedback, not certification. Hidden behavior or an unsupported claim is not enough to pass a visible practice step.
-- Pairing, identity and payments remain explicit Nimiq Pay confirmations. Truly never asks for private keys or recovery words.
+- Wake listening runs locally after **Resume** and stops with **Pause** or **Hide companion**.
+- Pairing, identity and payments remain explicit Nimiq Pay confirmations.
+- Truly never asks for private keys or recovery words.
 
-## Quick answers
+## Fix common problems
 
-**Can I connect by pasting an address?**  
-No. Anyone can copy a public address. Truly lists only accounts shared by Nimiq Pay and requires wallet signatures when authority matters.
+### The pairing code was not found
 
-**Why is Truly’s wallet activity different from Nimiq Pay?**  
-Nimiq Pay shows the complete wallet portfolio. Truly intentionally shows only its own validated Path payments and unlocks.
+Create a fresh code from **Mac menu icon → Settings… → Connection → Pair this Mac** and enter it within five minutes. If Settings says **Local development Core**, that code works only with a local Mini App using the same Core. The public Mini App needs the production Mac build.
 
-**Why can’t I edit or delete a submitted Path?**  
-The reviewer must see the exact snapshot that could become public. If changes are requested, the creator can revise or delete the private draft.
+### The Mac does not appear on the phone
 
-**Does Truly control my Mac?**  
-No. It can point to a visible area and suggest the next action, but you operate the keyboard, pointer, application and wallet.
+Open **Devices** and tap **Approve Truly access** or **Refresh devices**. If needed, remove the old connection and pair again with a fresh code.
+
+### The Mac did not show the Task
+
+Return to the Task or Path on the phone, tap **Start or continue on my Mac**, select the Mac and wait for **Loaded in Truly on [Mac name]**. On the Mac, click the menu icon and choose **Open Task** or **Show companion**.
+
+### Voice is listening but does not answer
+
+Open the Truly menu and read the status under Voice. Confirm that a Task is active, the Mac is paired and **Settings… → Privacy → AI help** is allowed. Use **Record a question** to test transcription separately from the wake phrase. If Text mode also fails, the AI service is unavailable rather than the microphone.
+
+### The wrong wallet signs an approval
+
+Truly uses Nimiq Pay’s primary signing account. Open **Wallet & access → Reconnect wallet → Disconnect and reconnect**. Change the primary signer inside Nimiq Pay first if it still returns the old account.
+
+### A payment remains pending
+
+Return to the Path and tap **Check payment**. Do not create a second payment.
+
+### Progress did not change
+
+Questions do not complete steps. On the Mac, choose **Open Task → Check my work**, pass every visible criterion, then refresh **Progress** on the phone.

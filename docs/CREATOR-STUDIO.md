@@ -30,11 +30,15 @@ A draft can define:
 
 Steps and resources can be added, edited, removed and reordered. Drafts remain private and can be deleted while they are editable.
 
+Submission requires the Path’s title, link, summary, description, subject, language, at least one outcome, at least one tool or environment, and at least one complete step. Every submitted step needs a title, instructions, a concrete practice challenge and visible completion criteria. Prerequisites, starting links, resources and hints are optional.
+
 ## Preview and submit
 
 Preview uses the learner-facing Path layout so the creator can inspect the outcome, access terms and full sequence before submission.
 
 Submitting locks an exact saved revision. That snapshot cannot be changed during review, which ensures the reviewer evaluates the same content that could become public.
+
+If required content is missing, Creator Studio keeps the draft editable and names the missing fields beside **Submit for review**. Successful submission is confirmed in the same place and changes the draft to **In review** before it can appear in the reviewer queue.
 
 ## Wallet-authenticated review
 
@@ -61,11 +65,13 @@ A creator may publish for free or set a NIM price. A paid listing shows the vers
 
 Publication and checkout are separate authorities. Truly Core still resolves the active approved version and creator recipient, prepares an immutable order and independently verifies the finalized NIM transfer before granting access.
 
+Approval pins the creator’s signed Nimiq address and exact price into that Path version. NIM goes directly to the creator; there is no shared marketplace receiving wallet. A later update cannot change an already prepared order. Checkout also requires the global NIM payment switch to be enabled. USDT is not available.
+
 ## Connect or switch wallets
 
-**Connect wallet** lists accounts exposed by Nimiq Pay and asks the user to choose one. Truly does not silently take the first address and cannot create, import or switch the signing account inside Nimiq Pay.
+**Connect wallet** requests access through Nimiq Pay and immediately connects the primary returned account; there is no redundant address-list screen. The current Nimiq Mini App provider can list several addresses, but `sign(message)` has no address parameter, so Truly cannot safely present those additional addresses as separately signable identities.
 
-**Wallet & access → Switch account** uses the same chooser. The current server sign-in must be revoked before the new identity is committed. Changing identity clears private screens and permission state; purchases, Tasks and paired Macs remain attached to their original wallet owner.
+**Wallet & access → Reconnect wallet** ends the current Truly session and refreshes the primary signer exposed by Nimiq Pay. It does not claim to change Nimiq Pay's active signer. Changing the primary signer requires a host capability or account change inside Nimiq Pay; Truly never substitutes a visible but non-signing address. Purchases, Tasks and paired Macs remain attached to their original wallet owner.
 
 Related documentation:
 

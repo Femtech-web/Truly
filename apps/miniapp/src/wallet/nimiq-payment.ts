@@ -23,7 +23,7 @@ export async function sendNimiqPayment(provider: PaymentProvider, input: Payment
   // Pay builds report false while their block-height and payment APIs work.
   const validityStartHeight = await provider.getBlockNumber()
   if (!Number.isSafeInteger(validityStartHeight) || validityStartHeight < 1) {
-    throw new Error('Nimiq Pay could not read the current testnet block. Close and reopen Truly, then try again.')
+    throw new Error('Nimiq Pay could not read the current Mainnet block. Close and reopen Truly, then try again.')
   }
   const result = await provider.sendBasicTransactionWithData({
     recipient: input.recipient,

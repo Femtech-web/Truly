@@ -15,7 +15,7 @@
   </p>
 </div>
 
-> **Network note:** NIM Path purchases currently use Nimiq Testnet. Test NIM has no real-world value.
+> **Network note:** Approved paid Paths use real NIM on Nimiq Mainnet. Nimiq Pay shows the amount and creator payout address before every approval; Core independently verifies the finalized transfer before access changes. USDT remains disabled.
 
 ## Learning breaks when the work begins
 
@@ -61,7 +61,7 @@ flowchart LR
 | Surface | Responsibility |
 | --- | --- |
 | **Truly for macOS** | Draggable screen-aware companion, text and voice questions, spoken replies, Task context, resources and deliberate practice checks. |
-| **Truly Mini App** | Nimiq identity, account selection, signed Mac pairing, private Tasks, creator Paths, NIM purchases, devices, access and progress. |
+| **Truly Mini App** | Primary Nimiq identity, signed Mac pairing, private Tasks, creator Paths, NIM purchases, devices, access and progress. |
 | **Creator Studio** | Public creator profiles, private drafts, ordered steps and resources, free or NIM access, learner preview, review and versioned publishing. |
 | **Truly Core** | Owner-scoped authority, sessions, immutable Path versions, payment verification, entitlements, AI boundaries, progress and review receipts. |
 | **Product website** | Product story and a concise learner-and-creator guide. |
@@ -93,6 +93,7 @@ Revenue is attached to useful learning products:
 - Private Tasks and free Paths provide an open entry into Truly.
 - Truly Studio can publish first-party premium Paths priced in NIM.
 - Independent creators can choose free access or receive NIM for a paid Path through their verified wallet identity.
+- The creator’s signed Nimiq address and exact price are pinned into the approved Path version and the learner’s order. Payments go directly to that creator.
 - Every paid unlock shows the version, price, network, creator and recipient before Nimiq Pay asks for approval.
 - Access remains with the wallet owner after Core verifies settlement; the product does not depend on advertising or custody of learner funds.
 
@@ -110,12 +111,25 @@ Nimiq is the ownership and payment layer joining the entire product—not a chec
 
 Truly never receives wallet keys or recovery words. Nimiq Pay remains the source of truth for the complete portfolio and wallet history; Truly shows only the Path payments and access it has independently validated.
 
+## What building on Nimiq Pay surfaced
+
+Truly works within the current Mini App provider and fails closed when wallet authority is ambiguous. Building a multi-account product exposed a few places where the platform could become stronger:
+
+| Current boundary | What would improve the developer and user experience |
+| --- | --- |
+| `listAccounts()` can expose several NIM addresses, while `sign(message)` has no address parameter. The NIM transaction methods also accept a recipient and value, but no sender. Truly therefore treats only Nimiq Pay's primary returned account as signable and never substitutes another visible address. | Add an address or sender parameter, or a native account chooser, to signing and transaction requests. Return the account that will act before approval and emit an account-change event when it changes. |
+| The SDK's `disconnect()` clears the web provider's cached connection but does not revoke the Mini App inside Nimiq Pay or change the host signer. | Add a host-level revoke/reconnect method and a permission-state API so a Mini App can accurately explain when authorization has ended. |
+| Nimiq Pay can represent wallet-managed, staked or contract-held funds that are not the balance of one directly queried basic address. | Expose a clearly labelled read-only portfolio or spendable-balance method. Until then, Truly leaves complete balances and wallet history in Nimiq Pay instead of showing a potentially misleading number. |
+| The provider can submit a NIM transaction and report the current block, but it does not expose transaction lookup, receipt or finality methods. | Add read-only transaction status and finality queries. Truly currently verifies recipient, amount, memo, execution and finality through a trusted MainAlbatross history RPC before unlocking a paid Path. |
+
+These are integration findings, not bypasses. Truly never infers wallet ownership from a pasted address, never treats an unverified secondary address as a creator payout identity and never grants paid access from a client-reported transaction alone. The provider surface referenced here is the current [`@nimiq/mini-app-sdk` Nimiq API](https://nimiq.dev/mini-apps/api-reference/nimiq-provider).
+
 ## End-to-end product integrity
 
 The purchase and learning flow crosses the real product boundaries:
 
-1. Nimiq Pay exposes the accounts the wallet has chosen to share.
-2. A purpose-bound signature connects the learner and authorizes a selected Mac.
+1. Nimiq Pay exposes the wallet's primary Mini App signing account.
+2. A purpose-bound signature proves that account controls the learner identity and authorizes a selected Mac.
 3. Truly Core creates an immutable order from the approved Path version and creator recipient.
 4. Nimiq Pay shows the native transaction confirmation and sends the payment only after learner approval.
 5. Core independently checks execution, finality, recipient, amount and order memo before granting access exactly once.
@@ -123,7 +137,7 @@ The purchase and learning flow crosses the real product boundaries:
 7. A deliberate practice check advances the saved step only when every visible criterion is met.
 8. Progress survives client restarts and resumes from the first unfinished step.
 
-This flow has been exercised with a **0.01 test-NIM** Path purchase, native Nimiq Pay approval, independent settlement verification, Mac handoff and durable practice progress.
+Before the Mainnet cutover, this flow was exercised end to end with a **0.01 test-NIM** Path purchase, native Nimiq Pay approval, independent settlement verification, Mac handoff and durable practice progress. The production verifier now accepts only MainAlbatross evidence.
 
 ## Trust is part of the product
 
@@ -199,7 +213,7 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Set the Mini App origin in `ALLOWED_ORIGINS` and `PAIRING_ORIGIN`. For phone testing, use the Mac’s LAN address rather than `localhost`. Keep payment flags off unless you are following the controlled Nimiq Testnet setup in [worker/README.md](worker/README.md).
+Set the Mini App origin in `ALLOWED_ORIGINS` and `PAIRING_ORIGIN`. For phone testing, use the Mac’s LAN address rather than `localhost`. Keep payment flags off for local development; the production payment path uses real Mainnet NIM and must be exercised only with the controlled acceptance steps in [worker/README.md](worker/README.md).
 
 ### 2. Start the Mini App
 

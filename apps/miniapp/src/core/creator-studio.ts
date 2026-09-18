@@ -20,6 +20,7 @@ export interface StudioLibrary {
   canReview: boolean
   tags: { slug: string; label: string; family: string }[]
 }
+
 export const newCreatorStep = (): CreatorStep => ({ id: createIdempotencyKey(), title: '', summary: '', workspaceLink: null, resources: [], challenge: '', rubric: [], hints: [] })
 export const newCreatorDocument = (): CreatorDocument => ({ slug: `new-path-${createIdempotencyKey().slice(0, 8)}`, title: '', summary: '', description: '',
   category: '', language: 'English', outcomes: [], prerequisites: [], supportedEnvironments: [], estimatedMinutes: 30, tags: [], priceNim: null, steps: [newCreatorStep()] })

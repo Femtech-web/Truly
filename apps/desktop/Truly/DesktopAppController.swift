@@ -17,6 +17,7 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
     private var subscriptions = Set<AnyCancellable>()
     private var voiceFocus = CGPoint.zero
     private var voiceQuestionInFlight = false
+    private var voiceAnswerPending = false
     private var voiceInteraction = UUID()
     private var speaking = false
     private var coolingDown = false
@@ -61,7 +62,18 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
         voice.onQuestion = { [weak self] text, review in self?.askByVoice(text, requiresReview: review) }
         voice.onStateChanged = { [weak self] state in self?.companion.setVoiceState(state) }
         learning.$phase.combineLatest(learning.$processorConsentGranted, learning.$voiceState)
-            .sink { [weak self] _ in Task { @MainActor in self?.reconcileVoice() } }
+            .sink { [weak self] phase, _, _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: self.voiceAnswerPending, phase: phase) {
+                        self.voiceAnswerPending = false
+                        self.presentWorkspace()
+                    } else if self.voiceAnswerPending, phase == .idle, !self.learning.response.isEmpty {
+                        self.voiceAnswerPending = false
+                    }
+                    self.reconcileVoice()
+                }
+            }
             .store(in: &subscriptions)
         pairing.$state.sink { [weak self] _ in Task { @MainActor in self?.reconcileVoice() } }
             .store(in: &subscriptions)
@@ -186,6 +198,7 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
         voiceInteraction = UUID()
         voiceLaunchTask?.cancel(); voiceLaunchTask = nil
         voiceQuestionInFlight = false
+        voiceAnswerPending = false
     }
 
     private func askByVoice(_ text: String, requiresReview: Bool) {
@@ -208,7 +221,10 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
                 learning.voiceState = .failed("Check what Truly heard, then press Ask—or try saying it again.")
                 presentWorkspace()
             }
-            else { learning.submitQuestion() }
+            else {
+                voiceAnswerPending = true
+                learning.submitQuestion()
+            }
             reconcileVoice()
         }
     }

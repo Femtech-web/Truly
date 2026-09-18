@@ -1,5 +1,10 @@
-const configuredCoreUrl = import.meta.env.VITE_TRULY_CORE_URL?.trim()
-  || (import.meta.env.PROD ? window.location.origin : '')
+import { resolveCoreUrl } from './core-url'
+
+const configuredCoreUrl = resolveCoreUrl({
+  production: import.meta.env.PROD,
+  configuredUrl: import.meta.env.DEV ? import.meta.env.VITE_TRULY_CORE_URL : undefined,
+  origin: window.location.origin,
+})
 
 interface CoreProblem {
   error?: {

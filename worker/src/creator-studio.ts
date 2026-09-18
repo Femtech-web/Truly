@@ -5,6 +5,7 @@ import { sha256 } from './security'
 import { parseLearningLink } from './learning/resources'
 import type { Env } from './types'
 import { isReviewer } from './reviewer'
+import { creatorNimPrice } from './payments/config'
 
 interface Creator { id: string; nimiq_address: string; slug: string; display_name: string; bio: string; avatar_url: string | null; status: string }
 interface Draft { id: string; creator_id: string; skill_id: string; base_version: number; revision: number; document_json: string; status: string; review_note: string }
@@ -190,15 +191,16 @@ async function reviewSnapshot(id: string | undefined, request: Request, env: Env
       ((creator_drafts.base_version = 0 AND status = 'draft') OR (current_version = creator_drafts.base_version AND status = 'published')))`)
     .bind(body.decision, body.note.trim(), claim, now, id, saved.revision)]
   if (body.decision === 'published') {
+    const nimPayment = document.priceNim === null ? null : creatorNimPrice(nimAtomic(document.priceNim), owner.nimiq_address)
     statements.push(env.DB.prepare(`INSERT INTO skill_versions (id, skill_id, version, manifest_json, review_status, published_at, access_kind, publication_json)
       SELECT ?, ?, ?, ?, 'approved', ?, ?, ? WHERE ${guard}`)
       .bind(crypto.randomUUID(), saved.skill_id, version, JSON.stringify(document), now, document.priceNim === null ? 'free' : 'paid',
-        JSON.stringify({ title: document.title, summary: document.summary, creatorName: owner.display_name }), id, claim))
+        JSON.stringify({ title: document.title, summary: document.summary, creatorName: owner.display_name, nimPayment }), id, claim))
     statements.push(env.DB.prepare(`UPDATE skills SET slug = ?, title = ?, summary = ?, description = ?, category = ?, status = 'published', current_version = ?, updated_at = ?
       WHERE id = ? AND ${guard}`).bind(document.slug, document.title, document.summary, document.description, document.category, version, now, saved.skill_id, id, claim))
     statements.push(env.DB.prepare(`DELETE FROM skill_prices WHERE skill_id = ? AND ${guard}`).bind(saved.skill_id, id, claim))
-    if (document.priceNim !== null) statements.push(env.DB.prepare(`INSERT INTO skill_prices (id,skill_id,asset,decimals,amount_atomic,recipient,active)
-      SELECT ?, ?, 'NIM', 5, ?, ?, 1 WHERE ${guard}`).bind(crypto.randomUUID(), saved.skill_id, nimAtomic(document.priceNim), owner.nimiq_address, id, claim))
+    if (nimPayment) statements.push(env.DB.prepare(`INSERT INTO skill_prices (id,skill_id,asset,decimals,amount_atomic,recipient,active)
+      SELECT ?, ?, 'NIM', 5, ?, ?, 1 WHERE ${guard}`).bind(crypto.randomUUID(), saved.skill_id, nimPayment.amountAtomic, nimPayment.recipient, id, claim))
     statements.push(env.DB.prepare(`DELETE FROM skill_tags WHERE skill_id = ? AND ${guard}`).bind(saved.skill_id, id, claim))
     for (const tag of document.tags) statements.push(env.DB.prepare(`INSERT INTO skill_tags (skill_id, tag_id) SELECT ?, id FROM tags WHERE slug = ? AND ${guard}`).bind(saved.skill_id, tag, id, claim))
     statements.push(env.DB.prepare(`UPDATE creators SET status = 'active', updated_at = ? WHERE id = ? AND ${guard}`).bind(now, owner.id, id, claim))

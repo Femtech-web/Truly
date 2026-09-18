@@ -46,7 +46,7 @@ The creator recipient is a verified wallet identity rather than a payout address
 
 ### Current commercial boundary
 
-The implemented model supports first-party Path revenue and direct creator sales. It does not represent an automatic marketplace commission, subscription or advertising model. Nimiq Testnet is used for the current product environment, so test NIM carries no real-world value.
+The implemented model supports first-party Path revenue and direct creator sales on Nimiq Mainnet. It does not represent an automatic marketplace commission, subscription or advertising model. USDT, automatic revenue splitting and custodial creator balances are not part of this payment path.
 
 ## Why the model fits Nimiq
 

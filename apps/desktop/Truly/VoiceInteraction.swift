@@ -44,6 +44,14 @@ enum TrulySpeechPlaybackPolicy {
     }
 }
 
+enum TrulyVoiceAnswerPresentationPolicy {
+    static func shouldPresentWorkspace(answerPending: Bool, phase: LearningSessionPhase) -> Bool {
+        guard answerPending else { return false }
+        if case .failed = phase { return true }
+        return false
+    }
+}
+
 struct TrulyVoiceEligibility {
     let mode: TrulyInputMode
     let paused: Bool

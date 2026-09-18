@@ -3,7 +3,7 @@ import { getWalletError, wasRejected } from '../wallet/errors'
 import { createNimiqWallet } from '../wallet/nimiqWallet'
 import type { WalletPort, WalletState } from '../wallet/types'
 import { endBrowserSession, resumeBrowserSession } from '../core/browser-session'
-import { availableAccounts, changeAccount } from '../wallet/accounts'
+import { availableAccounts, changeAccount, requireSigningAccount } from '../wallet/accounts'
 
 const initialState: WalletState = {
   status: 'initializing',
@@ -76,6 +76,7 @@ export function useWallet() {
     if (approvalOpen.current) throw new Error('Finish the open wallet approval before switching accounts.')
     approvalOpen.current = true
     try {
+      requireSigningAccount(selected, discovered.current)
       await changeAccount({ selected, available: discovered.current, current: state.account, endSession: endBrowserSession,
         commit: account => {
           operationRef.current += 1

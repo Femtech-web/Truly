@@ -49,7 +49,7 @@ export interface Device {
 }
 
 export interface WalletChainStatus {
-  network: 'nimiq-testnet'
+  network: 'nimiq-mainnet'
   availableAtomic: string
   observedAtBlock: string
 }
@@ -59,7 +59,7 @@ export interface WalletActivityOrder {
   pathId: string
   pathTitle: string | null
   asset: 'NIM' | 'USDT'
-  network: 'nimiq-testnet' | 'polygon'
+  network: 'nimiq-testnet' | 'nimiq-mainnet' | 'polygon'
   amountAtomic: string
   decimals: number
   transactionHash: string | null

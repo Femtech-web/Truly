@@ -1,18 +1,19 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface Props {
   open: boolean; account: string | null; onClose: () => void;
   onDiscover: () => Promise<string[]>; onSelect: (account: string) => Promise<void>;
+  onReconnect: () => Promise<boolean>;
 }
 
-export function WalletConnectSheet({ open, account, onClose, onDiscover, onSelect }: Props) {
+export function WalletConnectSheet({ open, account, onClose, onDiscover, onSelect, onReconnect }: Props) {
   const dialog = useRef<HTMLDialogElement>(null), generation = useRef(0), lock = useRef(false)
   const titleId = useId()
-  const [accounts, setAccounts] = useState<string[]>([]), [busy, setBusy] = useState(false), [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   useEffect(() => {
     generation.current++; lock.current = false
-    if (open) { setAccounts([]); setMessage(''); setBusy(false); dialog.current?.showModal() }
+    if (open) { setMessage(''); setBusy(false); dialog.current?.showModal() }
     else dialog.current?.close()
     return () => { generation.current++ }
   }, [open])
@@ -27,11 +28,26 @@ export function WalletConnectSheet({ open, account, onClose, onDiscover, onSelec
     onCancel={event => { event.preventDefault(); if (!busy) onClose() }}
     onClick={event => { if (event.target === event.currentTarget && !busy) { const rect = dialog.current!.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose() } }}>
     <div className="sheet-grabber" aria-hidden="true" />
-    <header className="task-sheet__header"><h2 id={titleId}>{account ? 'Switch account' : 'Connect wallet'}</h2><button className="icon-button" aria-label="Close wallet chooser" disabled={busy} onClick={onClose}><X size={18} /></button></header>
-    <p className="wallet-sheet-intro">Choose an account from Nimiq Pay.</p>
-    <button className="primary-button" disabled={busy} onClick={() => { void run(async () => { const revision = generation.current; const result = await onDiscover(); if (revision === generation.current) setAccounts(result) }) }}>{busy ? 'Waiting for Nimiq Pay…' : accounts.length ? 'Refresh accounts' : 'Connect through Nimiq Pay'}</button>
-    {accounts.length > 0 && <div className="wallet-account-list" aria-label="Available accounts">{accounts.map(address => <button className="secondary-button" key={address} disabled={busy} onClick={() => { void run(async () => { await onSelect(address); onClose() }) }}><span>{address.match(/.{1,4}/g)?.join(' ')}</span>{address === account && <Check size={18} aria-label="Current account" />}</button>)}</div>}
+    <header className="task-sheet__header"><h2 id={titleId}>{account ? 'Reconnect wallet' : 'Connect wallet'}</h2><button className="icon-button" aria-label="Close wallet chooser" disabled={busy} onClick={onClose}><X size={18} /></button></header>
+    {account ? <>
+      <p className="wallet-sheet-intro">Nimiq Pay controls the account that signs Mini App requests. Reconnect to refresh that signing account.</p>
+      <button className="primary-button" disabled={busy} onClick={() => { void run(async () => {
+        if (!await onReconnect()) throw new Error('Could not disconnect securely. Check your connection and try again.')
+      }) }}>{busy ? 'Disconnecting…' : 'Disconnect and reconnect'}</button>
+      <p className="wallet-sheet-note">Your purchases, Tasks, progress and paired Macs remain saved under this wallet.</p>
+    </> : <>
+      <p className="wallet-sheet-intro">Nimiq Pay will connect the primary account it uses to sign Mini App requests.</p>
+      <button className="primary-button" disabled={busy} onClick={() => { void run(async () => {
+        const revision = generation.current
+        const accounts = await onDiscover()
+        if (revision !== generation.current) return
+        const primary = accounts[0]
+        if (!primary) throw new Error('Nimiq Pay did not share a signing account. Try again.')
+        await onSelect(primary)
+        onClose()
+      }) }}>{busy ? 'Waiting for Nimiq Pay…' : 'Connect through Nimiq Pay'}</button>
+      <p className="wallet-sheet-note">Add or recover wallets in Nimiq Pay. Truly never asks for recovery words.</p>
+    </>}
     {message && <p className="form-error" role="alert">{message}</p>}
-    <p className="wallet-sheet-note">Add or recover accounts in Nimiq Pay. Truly never asks for recovery words.</p>
   </dialog>
 }

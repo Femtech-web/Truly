@@ -5,6 +5,7 @@ import { HttpError } from '../http'
 import { readBoundedText } from '../learning/groq'
 import { nimiqAddressFromPublicKey, normalizeNimiqAddress } from '../security'
 import type { PaymentOrder } from './protocol'
+import { NIMIQ_MAINNET } from './config'
 
 type RecordValue = Record<string, unknown>
 function object(value: unknown): RecordValue {
@@ -120,6 +121,7 @@ export function dataCarriesOrderId(data: unknown, orderId: string): boolean {
 }
 
 export async function verifyNimSettlementByOrder(order: PaymentOrder, url: string, fetcher: typeof fetch = fetch): Promise<LocatedNimSettlement | null> {
+  if (order.network !== NIMIQ_MAINNET.orderNetwork) throw invalid()
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 22_000)
   let nextId = 0
@@ -138,13 +140,13 @@ export async function verifyNimSettlementByOrder(order: PaymentOrder, url: strin
     ])
     if (consensus !== true) return null
     const head = object(latest)
-    if (head.network !== 'TestAlbatross') throw invalid()
+    if (head.network !== NIMIQ_MAINNET.rpcNetwork) throw invalid()
     if (!Array.isArray(history)) throw new Error('invalid transaction history')
     let match: RecordValue | undefined
     for (const candidate of history.map(object)) {
       if (dataCarriesOrderId(candidate.recipientData ?? candidate.data, order.id)
         && typeof candidate.hash === 'string' && /^[0-9a-f]{64}$/.test(candidate.hash)
-        && candidate.executionResult === true && candidate.networkId === 5
+        && candidate.executionResult === true && candidate.networkId === NIMIQ_MAINNET.transactionNetworkId
         && await nimiqTransactionAuthorizesPayer(candidate, order.sender)
         && normalizeNimiqAddress(String(candidate.to)) === order.recipient
         && integer(candidate.value) === BigInt(order.amount_atomic)
@@ -161,7 +163,7 @@ export async function verifyNimSettlementByOrder(order: PaymentOrder, url: strin
     const finalizedHeight = integer(finalized)
     if (height > finalizedHeight) return null
     const block = object(blockResult)
-    if (integer(block.number) !== height || block.network !== 'TestAlbatross' || typeof block.hash !== 'string' || !/^[0-9a-f]{64}$/.test(block.hash)) throw invalid()
+    if (integer(block.number) !== height || block.network !== NIMIQ_MAINNET.rpcNetwork || typeof block.hash !== 'string' || !/^[0-9a-f]{64}$/.test(block.hash)) throw invalid()
     return { transactionHash: String(match.hash), blockNumber: height.toString(), blockHash: block.hash }
   } catch (error) {
     if (error instanceof HttpError) throw error
@@ -201,15 +203,16 @@ export async function verifySettlement(order: PaymentOrder, url: string, hash: s
   }
   try {
     if (order.asset === 'NIM') {
+      if (order.network !== NIMIQ_MAINNET.orderNetwork) throw invalid()
       const [consensus, latest, result] = await Promise.all([
         rpc('isConsensusEstablished', []), rpc('getLatestBlock', [false]), rpc('getTransactionByHash', [hash]),
       ])
       if (consensus !== true) return null
       const head = object(latest)
-      if (head.network !== 'TestAlbatross') throw invalid()
+      if (head.network !== NIMIQ_MAINNET.rpcNetwork) throw invalid()
       if (result === null) return null
       const tx = object(result)
-      if (tx.hash !== hash || tx.executionResult !== true || tx.networkId !== 5 ||
+      if (tx.hash !== hash || tx.executionResult !== true || tx.networkId !== NIMIQ_MAINNET.transactionNetworkId ||
           !await nimiqTransactionAuthorizesPayer(tx, order.sender) || normalizeNimiqAddress(String(tx.to)) !== order.recipient ||
           integer(tx.value) !== BigInt(order.amount_atomic) || tx.toType !== 0 || tx.flags !== 0) throw invalid()
       if (tx.blockNumber === undefined || tx.blockNumber === null) return null
@@ -221,7 +224,7 @@ export async function verifySettlement(order: PaymentOrder, url: string, hash: s
       const finalizedHeight = integer(finalized)
       if (height > finalizedHeight) return null
       const block = object(blockResult)
-      if (integer(block.number) !== height || block.network !== 'TestAlbatross' || typeof block.hash !== 'string' || !/^[0-9a-f]{64}$/.test(block.hash)) throw invalid()
+      if (integer(block.number) !== height || block.network !== NIMIQ_MAINNET.rpcNetwork || typeof block.hash !== 'string' || !/^[0-9a-f]{64}$/.test(block.hash)) throw invalid()
       return { blockNumber: height.toString(), blockHash: block.hash }
     }
     if (integer(await rpc('eth_chainId', [])) !== 137n) throw invalid()

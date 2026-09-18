@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { availableAccounts, changeAccount } from '../src/wallet/accounts.ts'
+import { availableAccounts, changeAccount, requireSigningAccount } from '../src/wallet/accounts.ts'
 const learner = 'NQ47GFC8SCHC7R9901CJY7971EMH22532AG1', seller = 'NQ1237R4KTF9AC69S6SMVMA5K0TAKYPCPB5G'
 test('account discovery normalizes and deduplicates only exposed valid accounts without choosing one', () => {
   assert.deepEqual(availableAccounts(['bad', learner.toLowerCase(), 'NQ47 GFC8 SCHC 7R99 01CJ Y797 1EMH 2253 2AG1', seller]), [learner, seller])
@@ -30,4 +30,8 @@ test('failed logout and an unexposed account never commit a switch', async () =>
 })
 test('reselecting the current account does not clear its permissions', async () => {
   await changeAccount({ selected: learner, available: [learner], current: learner, endSession: async () => { assert.fail('Unexpected logout') }, commit: () => { assert.fail('Unexpected switch') } })
+})
+test('only accepts the primary account exposed for Mini App signing', () => {
+  assert.doesNotThrow(() => requireSigningAccount(learner, [learner, seller]))
+  assert.throws(() => requireSigningAccount(seller, [learner, seller]), /primary account/i)
 })

@@ -27,6 +27,6 @@ test('turns the native account-sync failure into a safe available-balance check'
       { message: 'Failed to send payment transaction: Something went wrong syncing your account' },
       'NQ47 GFC8 SCHC 7R99 01CJ Y797 1EMH 2253 2AG1',
     ),
-    'Nimiq Pay could not prepare NQ47…2AG1 for this payment. In Nimiq Pay, make sure this account has enough available—not pending or staked—test NIM, then reopen Truly. No payment was sent.',
+    'Nimiq Pay could not prepare NQ47…2AG1 for this payment. In Nimiq Pay, make sure this account has enough available—not pending or staked—NIM, then reopen Truly. No payment was sent.',
   )
 })

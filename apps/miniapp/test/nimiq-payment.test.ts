@@ -70,7 +70,7 @@ test('stops before approval when Nimiq Pay cannot provide a valid block height',
       value: 1_000,
       reference: 'order-123',
     }),
-    /current testnet block/i,
+    /current Mainnet block/i,
   )
   assert.equal(requestedApproval, false)
 })

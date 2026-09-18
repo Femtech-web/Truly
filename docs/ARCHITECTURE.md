@@ -68,6 +68,8 @@ Wallet actions use short-lived, purpose-bound challenges. Core verifies the Nimi
 
 Mac pairing uses a hashed short code and one-use exchange secret. The phone signs the exact device request, Core binds the approved wallet and installation, and the Mac stores its resulting credential in Keychain. Revocation invalidates the device and its desktop sessions atomically.
 
+The Mac and Mini App must use the same Core environment because the short code is a database-backed, one-use challenge. Production desktop builds use `https://app.usetruly.site`; Settings names the active environment so a local Xcode build cannot be mistaken for production. A missing or malformed desktop endpoint fails over to the production Core rather than silently creating local-only codes.
+
 Changing wallet identity first revokes the current browser session, then remounts private screens and permission holders. Saved Tasks, purchases and paired devices remain attached to their original owner.
 
 ## Tasks, Paths and versions
@@ -100,7 +102,9 @@ sequenceDiagram
     C-->>M: Path unlocked
 ```
 
-Core creates the order from the approved Path version, active NIM price and creator recipient. Access is granted only when the public transaction satisfies the expected network, sender authority, recipient, amount, order memo, execution and finality rules. Repeated checks return the same entitlement rather than granting access twice.
+Core creates the order from the approved Path version, active NIM price and creator recipient. New NIM orders are explicitly bound to `nimiq-mainnet`; settlement accepts only MainAlbatross blocks and network ID 24. Access is granted only when the public transaction satisfies that network, sender authority, recipient, amount, order memo, execution and finality rules. Repeated checks return the same entitlement rather than granting access twice.
+
+Each creator’s purpose-signed Nimiq wallet is their payout identity. Approval snapshots the NIM recipient, integer-Luna price and decimals into the immutable Path version. Discovery and order creation refuse any listing that differs from that snapshot or creator identity. Orders copy those terms; settlement checks the order, never a later listing or a global seller address. `NIM_PAYMENTS_ENABLED` is the global checkout kill switch. USDT remains disabled.
 
 Nimiq Pay remains authoritative for the complete wallet portfolio and transaction history. Truly intentionally displays only its independently validated Path payments and access activity.
 

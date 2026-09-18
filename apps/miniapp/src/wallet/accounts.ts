@@ -3,7 +3,14 @@ export function availableAccounts(values: string[]): string[] {
     .filter(value => /^NQ\d{2}[0-9A-Z]{32}$/.test(value)))].slice(0, 100)
 }
 
-// Preserve the current identity on rejected discovery; never choose accounts[0].
+export function requireSigningAccount(selected: string, available: string[]): void {
+  if (selected !== available[0]) {
+    throw new Error('Nimiq Pay can only sign Mini App requests with its primary account. Reconnect with that account to continue.')
+  }
+}
+
+// Preserve the current identity on rejected discovery. The caller separately
+// restricts signed Mini App identity to the provider's primary account.
 export async function changeAccount(input: {
   selected: string; available: string[]; current: string | null;
   endSession: () => Promise<void>; commit: (account: string) => void;

@@ -11,10 +11,10 @@ PAIRING_ORIGIN = "https://app.usetruly.site"
 AI_PROVIDER = "groq"
 GROQ_MODEL = "qwen/qwen3.8-27b"
 GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
-GROQ_DATA_CONTROLS_CONFIRMED = "false"
+GROQ_DATA_CONTROLS_CONFIRMED = "true"
 AI_DAILY_LIMIT = "100"
 REVIEWER_WALLETS = "NQ47GFC8SCHC7R9901CJY7971EMH22532AG1"
-NIM_PAYMENTS_ENABLED = "false"
+NIM_PAYMENTS_ENABLED = "true"
 USDT_PAYMENTS_ENABLED = "false"
 USDT_MAINNET_APPROVED = "false"
 
@@ -22,6 +22,8 @@ USDT_MAINNET_APPROVED = "false"
 binding = "DB"
 database_name = "truly-core"
 database_id = "01df0367-3b66-4275-84a0-78f9b26dde24"
+# Keep local demo data separate. Deployments continue to use database_id.
+preview_database_id = "truly-core-local"
 migrations_dir = "../migrations"
 
 [[routes]]

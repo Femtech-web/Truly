@@ -26,7 +26,7 @@ export function App() {
   const [walletSheetOpen, setWalletSheetOpen] = useState(false)
   // An identity change unmounts every private-data/permission holder immediately.
   return <><WalletApp key={wallet.account ?? 'disconnected'} wallet={wallet} onConnect={() => setWalletSheetOpen(true)} />
-    <WalletConnectSheet open={walletSheetOpen} account={wallet.account} onClose={() => setWalletSheetOpen(false)} onDiscover={wallet.connect} onSelect={wallet.selectAccount} /></>
+    <WalletConnectSheet open={walletSheetOpen} account={wallet.account} onClose={() => setWalletSheetOpen(false)} onDiscover={wallet.connect} onSelect={wallet.selectAccount} onReconnect={wallet.disconnect} /></>
 }
 
 function WalletApp({ wallet, onConnect }: { wallet: ReturnType<typeof useWallet>; onConnect: () => void }) {

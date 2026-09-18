@@ -4,7 +4,7 @@ import { HttpError, json, readJson } from '../http'
 import { consumeLimit } from '../rate-limits'
 import { normalizeNimiqAddress, randomToken, sha256 } from '../security'
 import type { Env } from '../types'
-import { paymentConfiguration, POLYGON_USDT, rpcUrl, type PaymentAsset } from './config'
+import { approvedNimPrice, paymentConfiguration, POLYGON_USDT, rpcUrl, type PaymentAsset } from './config'
 import { bindingData, publicOrder, type PaymentOrder } from './protocol'
 import { verifyNimSettlementByOrder, verifySettlement, type Settlement } from './settlement'
 
@@ -51,13 +51,13 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
     .bind(identity.walletAddress, body.pathId).first()
   if (owned) throw new HttpError(409, 'path_already_owned', 'You already own this Path. Refresh to start it on your Mac.')
   const price = await env.DB.prepare(`SELECT p.amount_atomic, p.recipient, p.decimals, p.chain_id, p.token_address,
-    c.nimiq_address, c.evm_address, c.status AS creator_status, v.manifest_json
+    c.nimiq_address, c.evm_address, c.status AS creator_status, v.manifest_json, v.publication_json, v.access_kind
     FROM skill_prices p JOIN skills s ON s.id=p.skill_id JOIN creators c ON c.id=s.creator_id
     JOIN skill_versions v ON v.skill_id=s.id AND v.version=s.current_version
     WHERE p.skill_id=? AND p.asset=? AND p.active=1 AND s.current_version=? AND s.status='published' AND v.review_status='approved'`)
     .bind(body.pathId, asset, body.version).first<{ amount_atomic: string; recipient: string; decimals: number;
-      chain_id: string | null; token_address: string | null; nimiq_address: string; evm_address: string | null; creator_status: string; manifest_json: string }>()
-  if (!price || price.creator_status !== 'active' || !/^[1-9]\d{0,14}$/.test(price.amount_atomic) ||
+      chain_id: string | null; token_address: string | null; nimiq_address: string; evm_address: string | null; creator_status: string; manifest_json: string; publication_json: string; access_kind: string }>()
+  if (!price || price.access_kind !== 'paid' || price.creator_status !== 'active' || !/^[1-9]\d{0,14}$/.test(price.amount_atomic) ||
       BigInt(price.amount_atomic) > BigInt(Number.MAX_SAFE_INTEGER) || price.decimals !== configuration.decimals) {
     throw new HttpError(503, 'path_payment_unavailable', 'This Path is not ready for purchase yet.')
   }
@@ -67,7 +67,9 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
   }
   const recipient = asset === 'NIM' ? normalizeNimiqAddress(price.recipient) : price.recipient.toLowerCase()
   const creatorRecipient = asset === 'NIM' ? normalizeNimiqAddress(price.nimiq_address) : price.evm_address?.toLowerCase()
-  if (recipient !== configuration.recipient || recipient !== creatorRecipient || recipient === sender ||
+  const approvedRecipient = asset === 'NIM' ? approvedNimPrice(price.publication_json, price.nimiq_address,
+    { recipient, amountAtomic: price.amount_atomic, decimals: price.decimals }).recipient : configuration.recipient
+  if (recipient !== approvedRecipient || recipient !== creatorRecipient || recipient === sender ||
       (asset === 'USDT' && (price.chain_id !== '0x89' || price.token_address?.toLowerCase() !== POLYGON_USDT))) {
     throw new HttpError(503, 'recipient_unverified', 'This seller’s payment details are not ready yet.')
   }

@@ -381,8 +381,7 @@ private struct LearningTurnService {
     }
 
     func check(_ body: LearningTurnBody, token: String, key: String) async throws -> PracticeResponse {
-        let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String
-        guard let base = URL(string: configured ?? "http://127.0.0.1:8787") else { throw LearningTurnError.invalidResponse }
+        let base = TrulyCoreConfiguration.baseURL
         var request = URLRequest(url: base.appending(path: "/v1/learning/attempts"))
         request.httpMethod = "POST"
         request.httpBody = try JSONEncoder().encode(body)
@@ -403,10 +402,7 @@ private struct LearningTurnService {
     }
 
     func submit(_ body: LearningTurnBody, token: String) async throws -> LearningTurnResponse {
-        let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String
-        guard let baseURL = URL(string: configured ?? "http://127.0.0.1:8787") else {
-            throw LearningTurnError.server("Truly is not ready to connect yet.")
-        }
+        let baseURL = TrulyCoreConfiguration.baseURL
         var request = URLRequest(url: baseURL.appending(path: "/v1/learning/turn"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")

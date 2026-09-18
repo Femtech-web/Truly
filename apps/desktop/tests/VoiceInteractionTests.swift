@@ -48,6 +48,9 @@ struct VoiceInteractionTests {
         precondition(TrulySpeechPlaybackPolicy.acceptsCallback(active: ObjectIdentifier(first), callback: ObjectIdentifier(first)))
         precondition(!TrulySpeechPlaybackPolicy.acceptsCallback(active: ObjectIdentifier(second), callback: ObjectIdentifier(first)))
         precondition(!TrulySpeechPlaybackPolicy.acceptsCallback(active: nil, callback: ObjectIdentifier(first)))
-        print("34 voice/input boundary checks passed")
+        precondition(TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: true, phase: .failed("offline")))
+        precondition(!TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: false, phase: .failed("offline")))
+        precondition(!TrulyVoiceAnswerPresentationPolicy.shouldPresentWorkspace(answerPending: true, phase: .responding))
+        print("37 voice/input boundary checks passed")
     }
 }

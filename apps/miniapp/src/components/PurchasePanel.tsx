@@ -7,7 +7,7 @@ import type { Skill } from '../types'
 import { approvePurchaseBinding, choosePolygonAccount, payUsdt, usePolygon } from '../wallet/ethereumWallet'
 import { getPaymentError } from '../wallet/errors'
 
-type Order = { id: string; pathId: string; version: number; asset: 'NIM' | 'USDT'; network: 'nimiq-testnet' | 'polygon';
+type Order = { id: string; pathId: string; version: number; asset: 'NIM' | 'USDT'; network: 'nimiq-testnet' | 'nimiq-mainnet' | 'polygon';
   tokenAddress: string | null; sender: string; recipient: string; amountAtomic: string; decimals: number; senderVerified: boolean;
   transactionHash: string | null; status: 'quoted' | 'submitted' | 'validated' | 'rejected'; expiresAt: string; binding: Record<string, unknown> | null }
 interface Props { skill: Skill; account: string; devices: ReturnType<typeof useDevices>; payNim(input: { recipient: string; value: number; reference: string }): Promise<string>; onUnlocked(): void }
@@ -17,6 +17,7 @@ const amount = (atomic: string, decimals: number) => {
   return fraction ? `${whole}.${fraction}` : whole
 }
 const short = (value: string) => `${value.slice(0, 8)}…${value.slice(-6)}`
+const networkName = (network: Order['network']) => network === 'nimiq-mainnet' ? 'Nimiq Mainnet' : network === 'nimiq-testnet' ? 'Nimiq Testnet' : 'Polygon'
 const NIM_SUBMITTED = 'nimiq-submitted'
 const recoveryKey = (orderId: string) => `truly:pending-payment:${orderId}`
 const readPendingReference = (orderId: string) => {
@@ -39,10 +40,10 @@ export function PurchasePanel({ skill, account, devices, payNim, onUnlocked }: P
   const [evmAccount, setEvmAccount] = useState<string | null>(null)
   const [polygonReady, setPolygonReady] = useState(false)
   const [order, setOrder] = useState<Order | null>(null)
-  const [acceptedTestnet, setAcceptedTestnet] = useState(false)
+  const [acceptedMainnet, setAcceptedMainnet] = useState(false)
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   const requestKey = useRef(createIdempotencyKey())
-  useEffect(() => { setOrder(null); setMessage(''); setPolygonReady(false); requestKey.current = createIdempotencyKey() }, [asset, skill.id])
+  useEffect(() => { setOrder(null); setMessage(''); setPolygonReady(false); setAcceptedMainnet(false); requestKey.current = createIdempotencyKey() }, [asset, skill.id])
   useEffect(() => {
     if (!devices.ready) return
     try { void loadExisting(false) } catch { /* An older grant may not include purchase access. */ }
@@ -106,7 +107,7 @@ export function PurchasePanel({ skill, account, devices, payNim, onUnlocked }: P
   async function submitPayment() {
     if (!order) return
     if (order.status === 'quoted' && Date.parse(order.expiresAt) <= Date.now()) {
-      setOrder(null); setAcceptedTestnet(false); requestKey.current = createIdempotencyKey()
+      setOrder(null); setAcceptedMainnet(false); requestKey.current = createIdempotencyKey()
       setMessage('This payment review expired. Review the purchase again before paying.')
       return
     }
@@ -147,7 +148,7 @@ export function PurchasePanel({ skill, account, devices, payNim, onUnlocked }: P
 
   if (!available.length) return <section className="purchase-panel purchase-panel--disabled">
     <div><span>Paid Path</span><strong>{skill.prices.map(price => `${amount(price.amountAtomic, price.decimals)} ${price.asset}`).join(' or ')}</strong></div>
-    <p>The seller’s receiving wallet is still being verified. Payments remain off until it is configured and tested.</p>
+    <p>Checkout is not enabled for this Path yet. If you already purchased it, check your existing access.</p>
     {access ? <button className="secondary-button" type="button" disabled><LockKeyhole size={16} /> Checkout unavailable</button>
       : <button className="secondary-button" type="button" disabled={busy} onClick={() => void authorize()}><LockKeyhole size={16} /> Check existing access</button>}
     {message && <p className="purchase-message" role="status">{message}</p>}
@@ -155,16 +156,16 @@ export function PurchasePanel({ skill, account, devices, payNim, onUnlocked }: P
 
   return <section className="purchase-panel" aria-labelledby="purchase-title">
     <div className="purchase-panel__heading"><span><CircleDollarSign size={18} /></span><div><h2 id="purchase-title">Unlock this Path</h2><p>One payment. Keep access with this Nimiq wallet.</p></div></div>
-    <div className="purchase-assets" aria-label="Payment currency">{available.map(price => <button key={price.asset} className={asset === price.asset ? 'is-active' : ''} type="button" disabled={Boolean(order)} onClick={() => setAsset(price.asset)}><strong>{amount(price.amountAtomic, price.decimals)} {price.asset}</strong><small>{price.asset === 'NIM' ? 'Nimiq testnet' : 'Polygon'}</small></button>)}</div>
+    <div className="purchase-assets" aria-label="Payment currency">{available.map(price => <button key={price.asset} className={asset === price.asset ? 'is-active' : ''} type="button" disabled={Boolean(order)} onClick={() => setAsset(price.asset)}><strong>{amount(price.amountAtomic, price.decimals)} {price.asset}</strong><small>{price.asset === 'NIM' ? 'Nimiq Mainnet' : 'Polygon'}</small></button>)}</div>
     {!access ? <button className="primary-button" type="button" disabled={busy} onClick={() => void authorize()}>{busy ? 'Waiting for approval…' : 'Approve purchase access'}</button>
       : asset === 'USDT' && !evmAccount ? <button className="primary-button" type="button" disabled={busy} onClick={() => void chooseUsdt()}>Choose USDT wallet</button>
         : !order ? <button className="primary-button" type="button" disabled={busy} onClick={() => void review()}>{busy ? 'Preparing…' : 'Review purchase'}</button>
           : <div className="purchase-review">
-            <dl><div><dt>Path</dt><dd>{skill.title} · version {order.version}</dd></div><div><dt>Seller</dt><dd>{skill.creator.displayName}</dd></div><div><dt>You pay</dt><dd>{amount(order.amountAtomic, order.decimals)} {order.asset}</dd></div><div><dt>Network</dt><dd>{order.asset === 'NIM' ? 'Nimiq testnet' : 'Polygon'}</dd></div><div><dt>Recipient</dt><dd title={order.recipient}>{short(order.recipient)}</dd></div></dl>
-            {order.asset === 'NIM' && order.status === 'quoted' && !order.transactionHash && <label className="testnet-check"><input type="checkbox" checked={acceptedTestnet} onChange={event => setAcceptedTestnet(event.target.checked)} /><span>I switched Nimiq Pay to Testnet. Test NIM has no real value.</span></label>}
+            <dl><div><dt>Path</dt><dd>{skill.title} · version {order.version}</dd></div><div><dt>Seller</dt><dd>{skill.creator.displayName}</dd></div><div><dt>You pay</dt><dd>{amount(order.amountAtomic, order.decimals)} {order.asset}</dd></div><div><dt>Network</dt><dd>{networkName(order.network)}</dd></div><div><dt>Recipient</dt><dd title={order.recipient}>{short(order.recipient)}</dd></div></dl>
+            {order.asset === 'NIM' && order.network === 'nimiq-mainnet' && order.status === 'quoted' && !order.transactionHash && <label className="network-check"><input type="checkbox" checked={acceptedMainnet} onChange={event => setAcceptedMainnet(event.target.checked)} /><span>This uses real NIM on Mainnet. I reviewed the seller, recipient and amount.</span></label>}
             {order.asset === 'USDT' && !order.senderVerified && <button className="primary-button" type="button" disabled={busy} onClick={() => void bindUsdt()}>Approve this USDT wallet</button>}
             {order.asset === 'USDT' && order.senderVerified && !order.transactionHash && !polygonReady && <button className="secondary-button" type="button" disabled={busy} onClick={() => void usePolygon().then(() => { setPolygonReady(true); setMessage('Polygon selected. Review once more, then pay.') }).catch(error => setMessage(error instanceof Error ? error.message : 'Could not switch network.'))}>Switch to Polygon</button>}
-            {order.status === 'quoted' && !order.transactionHash && (order.asset === 'NIM' ? acceptedTestnet : order.senderVerified && polygonReady) && <button className="primary-button" type="button" disabled={busy} onClick={() => void submitPayment()}>{busy ? 'Waiting for Nimiq Pay…' : `Pay ${amount(order.amountAtomic, order.decimals)} ${order.asset}`}</button>}
+            {order.status === 'quoted' && !order.transactionHash && (order.asset === 'NIM' ? order.network === 'nimiq-mainnet' && acceptedMainnet : order.senderVerified && polygonReady) && <button className="primary-button" type="button" disabled={busy} onClick={() => void submitPayment()}>{busy ? 'Waiting for Nimiq Pay…' : `Pay ${amount(order.amountAtomic, order.decimals)} ${order.asset}`}</button>}
             {order.status === 'submitted' && (order.asset === 'NIM' || Boolean(order.transactionHash)) && <button className="secondary-button" type="button" disabled={busy} onClick={() => void check()}><RefreshCw size={15} /> Check payment</button>}
             {order.status === 'validated' && <p className="purchase-success"><Check size={15} /> Path unlocked</p>}
           </div>}

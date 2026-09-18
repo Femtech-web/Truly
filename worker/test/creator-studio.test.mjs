@@ -181,8 +181,12 @@ describe('Creator Studio boundary', () => {
     await publish(d)
     const price = sqlite.prepare('SELECT recipient,amount_atomic FROM skill_prices WHERE skill_id=?').get(d.skillId)
     expect(price).toEqual({ recipient: address, amount_atomic: '1001' })
+    const publication = JSON.parse(sqlite.prepare('SELECT publication_json FROM skill_versions WHERE skill_id=?').get(d.skillId).publication_json)
+    expect(publication.nimPayment).toEqual({ recipient: address, amountAtomic: '1001', decimals: 5 })
+    env.NIM_PAYMENTS_ENABLED = 'true'; env.NIM_RPC_URL = 'https://nim-rpc.test'
     expect((await (await getCreator('test-creator', env)).json()).skills.map(s => s.id)).toEqual([d.skillId])
     const listing = (await (await getCatalog(env)).json()).skills.find(s => s.id === d.skillId)
+    expect(listing.prices[0].checkoutEnabled).toBe(true)
     expect(listing.steps).toEqual([{ id: 'step-one', title: 'Make a shape', summary: '', workspaceLink: null, resources: [], challenge: null, rubric: [] }])
     await expect(resolveSkillVersion(env, address, d.skillId, 1)).rejects.toMatchObject({ status: 403 })
     sqlite.prepare("INSERT INTO entitlements (id,wallet_address,skill_id,source) VALUES ('test-paid-access',?,?,'grant')").run(address, d.skillId)
@@ -231,5 +235,16 @@ describe('Creator Studio boundary', () => {
     expect(old.title).toBe(before.title); expect(old.steps).toEqual(before.steps)
     await expect(resolveSkillVersion(env, address, d.skillId, 2)).rejects.toMatchObject({ status: 403 })
     expect(sqlite.prepare('SELECT access_kind FROM skill_versions WHERE skill_id=? ORDER BY version').all(d.skillId)).toEqual([{ access_kind: 'free' }, { access_kind: 'paid' }])
+  })
+  it('freezes each approved paid version price independently', async () => {
+    const d = await draft({ ...document, priceNim: '0.01' }); await publish(d)
+    const next = await (await call('POST', 'drafts', { skillId: d.skillId })).json()
+    const edited = await (await call('POST', `drafts/${next.id}`, { revision: 1, document: { ...document, priceNim: '0.02' } })).json()
+    await publish(edited)
+    const versions = sqlite.prepare('SELECT publication_json FROM skill_versions WHERE skill_id=? ORDER BY version').all(d.skillId)
+    expect(versions.map(v => JSON.parse(v.publication_json).nimPayment)).toEqual([
+      { recipient: address, amountAtomic: '1000', decimals: 5 },
+      { recipient: address, amountAtomic: '2000', decimals: 5 },
+    ])
   })
 })

@@ -1,7 +1,7 @@
 import { json } from './http'
 import type { Env } from './types'
 import { parseManifest } from './learning/access'
-import { paymentConfiguration } from './payments/config'
+import { approvedNimPrice, paymentConfiguration } from './payments/config'
 import { POLYGON_USDT } from './payments/config'
 import { normalizeNimiqAddress } from './security'
 
@@ -22,6 +22,7 @@ interface SkillRow {
   manifest_json: string
   review_status: string
   access_kind: string
+  publication_json: string
 }
 
 export async function getCatalog(env: Env): Promise<Response> {
@@ -30,7 +31,7 @@ export async function getCatalog(env: Env): Promise<Response> {
             skills.category, skills.current_version, creators.slug AS creator_slug,
             creators.display_name AS creator_name, creators.bio AS creator_bio,
             creators.status AS creator_status, creators.nimiq_address, creators.evm_address,
-            skill_versions.manifest_json, skill_versions.review_status, skill_versions.access_kind
+            skill_versions.manifest_json, skill_versions.review_status, skill_versions.access_kind, skill_versions.publication_json
      FROM skills
      JOIN creators ON creators.id = skills.creator_id
      JOIN skill_versions ON skill_versions.skill_id = skills.id
@@ -70,13 +71,15 @@ export async function getCatalog(env: Env): Promise<Response> {
       },
       tags: tags.results,
       prices: prices.results.map(price => {
-        const item = price as { asset: 'NIM' | 'USDT'; active: number; recipient: string; chainId: string | null; tokenAddress: string | null }
+        const item = price as { asset: 'NIM' | 'USDT'; active: number; recipient: string; amountAtomic: string; decimals: number; chainId: string | null; tokenAddress: string | null }
         let checkoutEnabled = false
         try {
           const configuration = paymentConfiguration(env, item.asset)
           const recipient = item.asset === 'NIM' ? normalizeNimiqAddress(item.recipient) : item.recipient.toLowerCase()
           const creatorRecipient = item.asset === 'NIM' ? normalizeNimiqAddress(skill.nimiq_address) : skill.evm_address?.toLowerCase()
-          checkoutEnabled = item.active === 1 && skill.creator_status === 'active' && recipient === configuration.recipient &&
+          const approvedRecipient = item.asset === 'NIM'
+            ? approvedNimPrice(skill.publication_json, skill.nimiq_address, item).recipient : configuration.recipient
+          checkoutEnabled = skill.access_kind === 'paid' && item.active === 1 && skill.creator_status === 'active' && recipient === approvedRecipient &&
             recipient === creatorRecipient && (item.asset === 'NIM' || (item.chainId === '0x89' && item.tokenAddress?.toLowerCase() === POLYGON_USDT))
         }
         catch { /* Unconfigured payment options remain honest previews. */ }

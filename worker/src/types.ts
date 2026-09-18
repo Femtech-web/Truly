@@ -10,7 +10,6 @@ export interface Env {
   AI_DAILY_LIMIT?: string
   NIM_PAYMENTS_ENABLED?: string
   NIM_RPC_URL?: string
-  NIM_PAYMENT_RECIPIENT?: string
   USDT_PAYMENTS_ENABLED?: string
   USDT_MAINNET_APPROVED?: string
   POLYGON_RPC_URL?: string

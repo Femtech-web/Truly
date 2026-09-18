@@ -94,8 +94,7 @@ struct VoiceTranscriptionService {
     private struct Problem: Decodable { struct Detail: Decodable { let message: String }; let error: Detail }
 
     func transcribe(_ audio: Data, token: String) async throws -> Response {
-        let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String
-        guard let baseURL = URL(string: configured ?? "http://127.0.0.1:8787") else { throw VoiceError.invalidResponse }
+        let baseURL = TrulyCoreConfiguration.baseURL
         let boundary = "TrulyBoundary\(UUID().uuidString)"
         var body = Data()
         body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"question.m4a\"\r\nContent-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)

@@ -58,7 +58,7 @@ export function getPaymentError(error: unknown, account: string) {
     const shortAccount = compactAccount.length > 12
       ? `${compactAccount.slice(0, 4)}…${compactAccount.slice(-4)}`
       : compactAccount
-    return `Nimiq Pay could not prepare ${shortAccount} for this payment. In Nimiq Pay, make sure this account has enough available—not pending or staked—test NIM, then reopen Truly. No payment was sent.`
+    return `Nimiq Pay could not prepare ${shortAccount} for this payment. In Nimiq Pay, make sure this account has enough available—not pending or staked—NIM, then reopen Truly. No payment was sent.`
   }
   return message
 }

@@ -11,10 +11,10 @@ GROQ_DATA_CONTROLS_CONFIRMED=false
 AI_DAILY_LIMIT=100
 ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 PAIRING_ORIGIN=http://localhost:5173
-# Phase 6: keep disabled until seller/price and trusted RPC are configured.
+# Global NIM kill switch. Each approved Path pins its signed creator recipient.
+# Keep disabled until approved prices, a trusted MainAlbatross RPC and a controlled real-NIM acceptance budget are configured.
 NIM_PAYMENTS_ENABLED=false
 NIM_RPC_URL=
-NIM_PAYMENT_RECIPIENT=
 USDT_PAYMENTS_ENABLED=false
 USDT_MAINNET_APPROVED=false
 POLYGON_RPC_URL=

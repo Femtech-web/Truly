@@ -46,6 +46,9 @@
 .studio-reorder .secondary-button { min-height: 44px; min-width: 44px; padding: 10px; }
 .studio-resource { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin: 12px 0; display: grid; gap: 10px; }
 .studio-editor-actions { display: grid; gap: 12px; margin-top: 22px; }
+.studio-submission-notice { margin-top: 18px; padding: 12px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; line-height: 1.55; }
+.studio-submission-notice--error { color: #a62e3a; background: #fff1f2; border: 1px solid #f2c9ce; }
+.studio-submission-notice--success { color: var(--teal-dark); background: var(--teal-soft); border: 1px solid var(--border); }
 .studio-delete-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: #a62e3a; font: inherit; font-weight: 700; cursor: pointer; }
 .studio-delete-button:disabled { opacity: .45; cursor: not-allowed; }
 .studio-preview { display: grid; gap: 16px; margin-top: 22px; overflow-wrap: anywhere; }

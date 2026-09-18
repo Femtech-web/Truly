@@ -1,7 +1,7 @@
 import type { Address } from 'viem'
 export interface PaymentOrder {
   id: string; wallet_address: string; skill_id: string; skill_version: number
-  asset: 'NIM' | 'USDT'; network: 'nimiq-testnet' | 'polygon'; token_address: string | null
+  asset: 'NIM' | 'USDT'; network: 'nimiq-testnet' | 'nimiq-mainnet' | 'polygon'; token_address: string | null
   sender: string; recipient: string; amount_atomic: string; decimals: number
   request_key: string; request_hash: string; binding_nonce: string; sender_verified_at: string | null
   transaction_hash: string | null; status: 'quoted' | 'submitted' | 'validated' | 'rejected'

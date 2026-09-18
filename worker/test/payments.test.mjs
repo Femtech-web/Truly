@@ -7,6 +7,8 @@ import { paymentConfiguration, POLYGON_USDT } from '../src/payments/config'
 import { createOrder, bindOrderSender, verifyOrder, listPurchases } from '../src/payments/orders'
 import { bindingData } from '../src/payments/protocol'
 import { nimiqTransactionAuthorizesPayer } from '../src/payments/settlement'
+import { getCatalog } from '../src/catalog'
+import { readFileSync } from 'node:fs'
 
 // Fixed synthetic test identities; never fund or reuse these as real wallets.
 const buyer = normalizeNimiqAddress(nimiqAddressFromPublicKey(new Uint8Array(32).fill(3)))
@@ -34,19 +36,19 @@ function rpc(results) {
   })
 }
 function nimEvidence(order, changes = {}, finalized = 40) {
-  return { isConsensusEstablished: true, getLatestBlock: { network: 'TestAlbatross', number: 41 },
-    getTransactionByHash: { hash: nimHash, executionResult: true, networkId: 5, from: buyer, to: seller,
+  return { isConsensusEstablished: true, getLatestBlock: { network: 'MainAlbatross', number: 41 },
+    getTransactionByHash: { hash: nimHash, executionResult: true, networkId: 24, from: buyer, to: seller,
       value: Number(order.amountAtomic), fromType: 0, toType: 0, flags: 0, blockNumber: 40,
       timestamp: Date.parse(order.createdAt) + 1000, ...changes }, getLastMacroBlock: finalized,
-    getBlockByNumber: { network: 'TestAlbatross', number: 40, hash: 'c'.repeat(64) } }
+    getBlockByNumber: { network: 'MainAlbatross', number: 40, hash: 'c'.repeat(64) } }
 }
 function nimMemoEvidence(order, changes = {}, history = null) {
-  const transaction = { hash: nimHash, executionResult: true, networkId: 5, from: buyer, to: seller,
+  const transaction = { hash: nimHash, executionResult: true, networkId: 24, from: buyer, to: seller,
     value: Number(order.amountAtomic), fromType: 0, toType: 0, flags: 0, blockNumber: 40,
     timestamp: Date.parse(order.createdAt) + 1000, recipientData: hex(order.id), ...changes }
-  return { isConsensusEstablished: true, getLatestBlock: { network: 'TestAlbatross', number: 41 },
+  return { isConsensusEstablished: true, getLatestBlock: { network: 'MainAlbatross', number: 41 },
     getTransactionsByAddress: history ?? [transaction], getLastMacroBlock: 40,
-    getBlockByNumber: { network: 'TestAlbatross', number: 40, hash: 'c'.repeat(64) } }
+    getBlockByNumber: { network: 'MainAlbatross', number: 40, hash: 'c'.repeat(64) } }
 }
 function usdtEvidence(order, logChanges = {}, chain = '0x89') {
   const log = { address: POLYGON_USDT, transactionHash: evmHash, blockHash, removed: false,
@@ -59,22 +61,84 @@ function usdtEvidence(order, logChanges = {}, chain = '0x89') {
 beforeEach(async () => {
   db = createTestDatabase()
   env = { DB: db.DB, PAIRING_ORIGIN: 'https://app.truly.test', ALLOWED_ORIGINS: 'https://app.truly.test',
-    NIM_PAYMENTS_ENABLED: 'true', NIM_RPC_URL: 'https://nim-rpc.test', NIM_PAYMENT_RECIPIENT: seller,
+    NIM_PAYMENTS_ENABLED: 'true', NIM_RPC_URL: 'https://nim-rpc.test',
     USDT_PAYMENTS_ENABLED: 'true', USDT_MAINNET_APPROVED: 'true', POLYGON_RPC_URL: 'https://polygon-rpc.test', USDT_PAYMENT_RECIPIENT: evmSeller }
   db.sqlite.prepare('INSERT INTO wallet_accounts(nimiq_address) VALUES (?)').run(buyer)
   db.sqlite.prepare('INSERT INTO wallet_accounts(nimiq_address) VALUES (?)').run(seller)
   db.sqlite.prepare(`INSERT INTO wallet_sessions(id,wallet_address,token_hash,expires_at,scopes) VALUES ('checkout',?,?,'2099-01-01T00:00:00.000Z','purchases:read purchases:write')`).run(buyer, await sha256('payment-test'))
   db.sqlite.prepare(`UPDATE creators SET status='active',nimiq_address=?,evm_address=? WHERE id='creator_truly_studio'`).run(seller, evmSeller)
   db.sqlite.prepare(`UPDATE skill_prices SET active=1,recipient=? WHERE asset='NIM'`).run(seller)
+  db.sqlite.prepare(`UPDATE skill_versions SET publication_json=json_set(publication_json,'$.nimPayment',json(
+    (SELECT json_object('recipient',recipient,'amountAtomic',amount_atomic,'decimals',decimals)
+     FROM skill_prices WHERE skill_id=skill_versions.skill_id AND asset='NIM')))
+    WHERE access_kind='paid'`).run()
   db.sqlite.prepare(`UPDATE skill_prices SET active=1,recipient=? WHERE asset='USDT'`).run(evmSeller)
 })
 afterEach(() => { vi.restoreAllMocks(); db.sqlite.close() })
 describe('independently verified Path purchases', () => {
+  it('supports different signed creator recipients without a global payout address', async () => {
+    const secondSeller = normalizeNimiqAddress(nimiqAddressFromPublicKey(new Uint8Array(32).fill(7)))
+    db.sqlite.prepare('INSERT INTO wallet_accounts(nimiq_address) VALUES (?)').run(secondSeller)
+    db.sqlite.prepare("INSERT INTO creators(id,nimiq_address,slug,display_name,status) VALUES ('second',?,'second','Second creator','active')").run(secondSeller)
+    db.sqlite.exec(`INSERT INTO skills(id,creator_id,slug,title,summary,description,category,status,current_version)
+      SELECT 'second-path','second','second-path',title,summary,description,category,status,current_version FROM skills WHERE id='${path}';
+      INSERT INTO skill_versions(id,skill_id,version,manifest_json,review_status,access_kind,publication_json)
+      SELECT 'second-version','second-path',version,manifest_json,review_status,access_kind,publication_json FROM skill_versions WHERE skill_id='${path}';`)
+    db.sqlite.prepare("INSERT INTO skill_prices(id,skill_id,asset,decimals,amount_atomic,recipient,active) VALUES ('second-price','second-path','NIM',5,'2000',?,1)").run(secondSeller)
+    db.sqlite.prepare("UPDATE skill_versions SET publication_json=json_set(publication_json,'$.nimPayment',json(?)) WHERE skill_id='second-path'")
+      .run(JSON.stringify({ recipient: secondSeller, amountAtomic: '2000', decimals: 5 }))
+    const first = await prepare()
+    const second = (await (await createOrder(request({ pathId: 'second-path', version: 1, asset: 'NIM' }, 'second-order-request'), env)).json()).order
+    expect(first.recipient).toBe(seller)
+    expect(second.recipient).toBe(secondSeller)
+    const listing = (await (await getCatalog(env)).json()).skills
+    expect(listing.find(s => s.id === 'second-path').prices[0].checkoutEnabled).toBe(true)
+    rpc(nimMemoEvidence(second, { to: secondSeller }))
+    expect((await (await verifyOrder(second.id, request({}), env)).json()).unlocked).toBe(true)
+  })
+  it.each(['recipient', 'amount', 'snapshot', 'creator', 'free'])('blocks a changed %s instead of quoting unapproved payment details', async change => {
+    if (change === 'recipient') db.sqlite.prepare("UPDATE skill_prices SET recipient=? WHERE skill_id=? AND asset='NIM'").run(buyer, path)
+    if (change === 'amount') db.sqlite.prepare("UPDATE skill_prices SET amount_atomic='1234' WHERE skill_id=? AND asset='NIM'").run(path)
+    if (change === 'snapshot') db.sqlite.prepare("UPDATE skill_versions SET publication_json='{}' WHERE skill_id=?").run(path)
+    if (change === 'creator') db.sqlite.prepare("UPDATE creators SET nimiq_address=? WHERE id='creator_truly_studio'").run(buyer)
+    if (change === 'free') db.sqlite.prepare("UPDATE skill_versions SET access_kind='free' WHERE skill_id=?").run(path)
+    await expect(prepare()).rejects.toMatchObject({ status: 503 })
+    const listing = (await (await getCatalog(env)).json()).skills.find(s => s.id === path)
+    expect(listing.prices.find(p => p.asset === 'NIM').checkoutEnabled).toBe(false)
+    expect(counts()).toEqual({ orders: 0, receipts: 0, access: 0 })
+  })
   it('requires configured payments and separately approved Polygon spending', async () => {
     await expect(createOrder(request({ pathId: path, version: 1, asset: 'NIM' }), { ...env, NIM_PAYMENTS_ENABLED: 'false' })).rejects.toMatchObject({ status: 503 })
     expect(() => paymentConfiguration({ ...env, USDT_MAINNET_APPROVED: 'false' }, 'USDT')).toThrow()
     expect(() => paymentConfiguration({ ...env, USDT_PAYMENT_RECIPIENT: `0x${'0'.repeat(40)}` }, 'USDT')).toThrow()
     expect(counts().orders).toBe(0)
+    const listing = (await (await getCatalog({ ...env, NIM_PAYMENTS_ENABLED: 'false', USDT_PAYMENTS_ENABLED: 'false' })).json()).skills.find(s => s.id === path)
+    expect(listing.prices.every(p => !p.checkoutEnabled)).toBe(true)
+  })
+  it('creates only Mainnet NIM orders and rejects historical Testnet orders at settlement', async () => {
+    const order = await prepare()
+    expect(order.network).toBe('nimiq-mainnet')
+    db.sqlite.prepare("UPDATE payment_orders SET network='nimiq-testnet' WHERE id=?").run(order.id)
+    rpc(nimEvidence(order))
+    await expect(verifyOrder(order.id, request({ transactionHash: nimHash }), env)).rejects.toMatchObject({ status: 422 })
+    expect(counts().access).toBe(0)
+  })
+  it('backfills only missing current-version NIM snapshots without modifying orders', async () => {
+    const order = await prepare()
+    const pinnedOrder = row(order.id)
+    db.sqlite.prepare("UPDATE skill_versions SET publication_json='{}',version=2 WHERE skill_id=?").run(path)
+    db.sqlite.prepare('UPDATE skills SET current_version=2 WHERE id=?').run(path)
+    db.sqlite.prepare(`INSERT INTO skill_versions(id,skill_id,version,manifest_json,review_status,access_kind,publication_json)
+      SELECT 'historical',skill_id,1,manifest_json,review_status,access_kind,'{}' FROM skill_versions WHERE skill_id=?`).run(path)
+    const migration = readFileSync(new URL('../../migrations/0015_creator_nim_prices.sql', import.meta.url), 'utf8')
+    db.sqlite.exec(migration)
+    const versions = db.sqlite.prepare('SELECT version,publication_json FROM skill_versions WHERE skill_id=? ORDER BY version').all(path)
+    expect(JSON.parse(versions[0].publication_json).nimPayment).toBeUndefined()
+    expect(JSON.parse(versions[1].publication_json).nimPayment).toEqual({ recipient: seller, amountAtomic: order.amountAtomic, decimals: 5 })
+    db.sqlite.prepare("UPDATE skill_prices SET amount_atomic='9999' WHERE skill_id=? AND asset='NIM'").run(path)
+    db.sqlite.exec(migration)
+    expect(JSON.parse(db.sqlite.prepare('SELECT publication_json FROM skill_versions WHERE skill_id=? AND version=2').get(path).publication_json).nimPayment.amountAtomic).toBe(order.amountAtomic)
+    expect(row(order.id)).toEqual(pinnedOrder)
   })
   it('pins the reviewed quote and replays one request without adopting a changed price', async () => {
     const order = await prepare()
@@ -83,6 +147,14 @@ describe('independently verified Path purchases', () => {
     expect((await prepare('NIM', 'different-request-0002')).id).toBe(order.id)
     await expect(prepare('USDT')).rejects.toMatchObject({ status: 409 })
     expect(counts()).toEqual({ orders: 1, receipts: 0, access: 0 })
+  })
+  it('settles against the pinned order after listing prices and recipients change', async () => {
+    const order = await prepare()
+    db.sqlite.prepare("UPDATE skill_prices SET amount_atomic='1234',recipient=? WHERE skill_id=? AND asset='NIM'").run(buyer, path)
+    rpc(nimMemoEvidence(order))
+    expect((await (await verifyOrder(order.id, request({}), env)).json()).unlocked).toBe(true)
+    expect(row(order.id).recipient).toBe(seller)
+    expect(row(order.id).amount_atomic).toBe(order.amountAtomic)
   })
   it('does not grant access from a callback before finality, then grants durably exactly once', async () => {
     const order = await prepare()
@@ -131,7 +203,7 @@ describe('independently verified Path purchases', () => {
     expect(row(order.id).transaction_hash).toBeNull()
     expect(counts().access).toBe(0)
   })
-  it.each([{ value: 1 }, { to: buyer }, { from: seller }, { executionResult: false }, { networkId: 24 }, { timestamp: 1 }])('rejects mismatched NIM evidence %j', async changes => {
+  it.each([{ value: 1 }, { to: buyer }, { from: seller }, { executionResult: false }, { networkId: 5 }, { timestamp: 1 }])('rejects mismatched NIM evidence %j', async changes => {
     const order = await prepare(); rpc(nimEvidence(order, changes))
     await expect(verifyOrder(order.id, request({ transactionHash: nimHash }), env)).rejects.toMatchObject({ status: 422 })
     expect(counts().access).toBe(0)
@@ -150,7 +222,7 @@ describe('independently verified Path purchases', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_, options) => {
       const { id, method } = JSON.parse(options.body)
       if (method === 'isConsensusEstablished') return Response.json({ jsonrpc: '2.0', id, result: { data: true } })
-      if (method === 'getLatestBlock') return Response.json({ jsonrpc: '2.0', id, result: { data: { network: 'TestAlbatross', number: 41 } } })
+      if (method === 'getLatestBlock') return Response.json({ jsonrpc: '2.0', id, result: { data: { network: 'MainAlbatross', number: 41 } } })
       if (method === 'getTransactionByHash') return Response.json({ jsonrpc: '2.0', id,
         error: { code: -32603, message: 'Internal error', data: `Transaction not found: ${nimHash}` } })
       throw new Error(`Unexpected method ${method}`)
@@ -162,7 +234,7 @@ describe('independently verified Path purchases', () => {
   it('rechecks wallet authority after waiting for chain evidence', async () => {
     const order = await prepare()
     const evidence = nimEvidence(order)
-    evidence.getBlockByNumber = () => { db.sqlite.exec('DELETE FROM wallet_sessions'); return { network: 'TestAlbatross', number: 40, hash: 'c'.repeat(64) } }
+    evidence.getBlockByNumber = () => { db.sqlite.exec('DELETE FROM wallet_sessions'); return { network: 'MainAlbatross', number: 40, hash: 'c'.repeat(64) } }
     rpc(evidence)
     await expect(verifyOrder(order.id, request({ transactionHash: nimHash }), env)).rejects.toMatchObject({ status: 401 })
     expect(counts().receipts).toBe(0)

@@ -290,6 +290,11 @@ struct TrulySettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             settingsCard(title: "Phone connection") {
                 Text(pairing.state.label).font(.system(size: 13, weight: .semibold))
+                Text(pairing.coreEnvironmentLabel).font(.system(size: 10, weight: .medium)).foregroundStyle(pairing.isLocalCore ? TrulyTheme.muted : TrulyTheme.tealDark)
+                if pairing.isLocalCore {
+                    Text("Local pairing codes work only with a Mini App using the same local Core. Use the production build for app.usetruly.site.")
+                        .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
+                }
                 if let address = pairing.walletAddress {
                     Text("\(address.prefix(8))…\(address.suffix(5))").font(.system(size: 11)).foregroundStyle(TrulyTheme.tealDark)
                     Text("Manage or revoke this Mac from Truly → Devices on your phone.").font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)

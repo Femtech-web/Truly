@@ -1,6 +1,27 @@
 import Foundation
 import Security
 
+enum TrulyCoreConfiguration {
+    static let productionURL = URL(string: "https://app.usetruly.site")!
+
+    static var baseURL: URL {
+        guard let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String,
+              let url = URL(string: configured.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme == "https" || url.scheme == "http" else {
+            return productionURL
+        }
+        return url
+    }
+
+    static var isLocal: Bool {
+        ["localhost", "127.0.0.1", "::1", "[::1]"].contains(baseURL.host ?? "")
+    }
+
+    static var displayName: String {
+        isLocal ? "Local development Core · \(baseURL.host ?? "localhost")" : "Production Core · \(baseURL.host ?? "app.usetruly.site")"
+    }
+}
+
 @MainActor
 final class DevicePairingModel: ObservableObject {
     enum LearningSessionChange: Equatable {
@@ -36,6 +57,7 @@ final class DevicePairingModel: ObservableObject {
     var hasStoredSession: Bool { KeychainStore.string(for: .desktopSession) != nil }
     var desktopSessionToken: String? { KeychainStore.string(for: .desktopSession) }
     var isLocalCore: Bool { service.isLocal }
+    var coreEnvironmentLabel: String { TrulyCoreConfiguration.displayName }
 
     private let service = PairingService()
     private var pollingTask: Task<Void, Never>?
@@ -259,7 +281,7 @@ private enum PairingServiceError: LocalizedError {
 }
 
 private struct PairingService {
-    var isLocal: Bool { ["localhost", "127.0.0.1", "::1"].contains(baseURL?.host ?? "") }
+    var isLocal: Bool { TrulyCoreConfiguration.isLocal }
 
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -276,7 +298,7 @@ private struct PairingService {
     }()
 
     func validateSession(token: String) async throws -> DesktopSessionResponse {
-        guard let url = baseURL?.appending(path: "/v1/desktop/session") else { throw PairingServiceError.configuration }
+        let url = baseURL.appending(path: "/v1/desktop/session")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
         request.timeoutInterval = 8
@@ -284,7 +306,7 @@ private struct PairingService {
     }
 
     func activeLearningSession(token: String) async throws -> DesktopLearningSession? {
-        guard let url = baseURL?.appending(path: "/v1/desktop/learning-session") else { throw PairingServiceError.configuration }
+        let url = baseURL.appending(path: "/v1/desktop/learning-session")
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
         request.timeoutInterval = 8
@@ -326,10 +348,7 @@ private struct PairingService {
         return .paired(PairedDesktopSession(token: token, walletAddress: walletAddress))
     }
 
-    private var baseURL: URL? {
-        let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String
-        return URL(string: configured ?? "http://127.0.0.1:8787")
-    }
+    private var baseURL: URL { TrulyCoreConfiguration.baseURL }
 
     private var installID: String {
         let key = "truly.device.install-id"
@@ -340,7 +359,7 @@ private struct PairingService {
     }
 
     private func request<T: Encodable>(path: String, body: T) throws -> URLRequest {
-        guard let url = baseURL?.appending(path: path) else { throw PairingServiceError.configuration }
+        let url = baseURL.appending(path: path)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")

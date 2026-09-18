@@ -20,8 +20,8 @@
 .purchase-review dl > div { display: grid; min-width: 0; grid-template-columns: minmax(62px, 76px) minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
 .purchase-review dt { color: var(--muted); font-size: 9px; }
 .purchase-review dd { min-width: 0; margin: 0; overflow-wrap: break-word; color: var(--ink); font-size: 10px; font-weight: 650; line-height: 1.45; text-align: right; }
-.testnet-check { display: grid; grid-template-columns: 20px 1fr; align-items: start; gap: 9px; padding: 11px; border-radius: 10px; background: #fff7e7; color: #66410a; font-size: 10px; line-height: 1.5; }
-.testnet-check input { width: 18px; height: 18px; accent-color: var(--teal); }
+.network-check { display: grid; grid-template-columns: 20px 1fr; align-items: start; gap: 9px; padding: 11px; border-radius: 10px; background: #fff7e7; color: #66410a; font-size: 10px; line-height: 1.5; }
+.network-check input { width: 18px; height: 18px; accent-color: var(--teal); }
 .purchase-message { font-size: 10px; line-height: 1.5; }
 .purchase-safety { color: var(--muted); font-size: 9px; line-height: 1.55; }
 .purchase-success { display: flex; align-items: center; gap: 7px; color: var(--success); font-size: 11px; font-weight: 700; }

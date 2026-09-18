@@ -28,9 +28,8 @@ final class TrulyAppDelegate: NSObject, NSApplicationDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = item.button else { return }
 
-        let image = NSImage(systemSymbolName: "scope", accessibilityDescription: "Truly")
-        image?.isTemplate = true
-        button.image = image
+        button.image = trulyMenuBarImage()
+        button.imagePosition = .imageOnly
         button.toolTip = "Truly"
         button.setAccessibilityLabel("Open Truly")
         button.target = self
@@ -48,6 +47,22 @@ final class TrulyAppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = hostingController
         popover.contentSize = hostingController.view.fittingSize
         statusItem = item
+    }
+
+    private func trulyMenuBarImage() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            NSColor.black.setStroke()
+            let ring = NSBezierPath(ovalIn: NSRect(x: 2, y: 2, width: 11.5, height: 11.5))
+            ring.lineWidth = 2
+            ring.stroke()
+
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: NSRect(x: 13.2, y: 13.2, width: 3.8, height: 3.8)).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Truly"
+        return image
     }
 
     @objc private func toggleMenuBarPopover(_ sender: Any?) {

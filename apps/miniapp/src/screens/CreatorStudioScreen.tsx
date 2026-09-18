@@ -4,6 +4,7 @@ import { CoreRequestError, coreRequest } from '../core/client'
 import { resumeBrowserSession } from '../core/browser-session'
 import { createIdempotencyKey } from '../core/idempotency'
 import { moveItem, newCreatorDocument, newCreatorStep, type CreatorDocument, type CreatorDraft, type CreatorProfile, type CreatorStep, type StudioLibrary } from '../core/creator-studio'
+import { creatorSubmissionIssues } from '../core/creator-submission'
 import { canDeleteCreatorDraft } from '../core/creator-draft-policy'
 import { CreatorProfileEditor, type CreatorProfileNotice } from '../components/CreatorProfileEditor'
 
@@ -21,6 +22,7 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [submissionNotice, setSubmissionNotice] = useState<{ kind: 'error' | 'success'; text: string } | null>(null)
   const [profileNotice, setProfileNotice] = useState<CreatorProfileNotice | null>(null)
   const generation = useRef(0), operation = useRef(false)
   const editorRef = useRef<HTMLElement | null>(null)
@@ -51,7 +53,7 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
   }
   useEffect(() => {
     const revision = ++generation.current
-    setLibrary(null); setSelected(null); setDocument(null); setProfile(null); setReady(false); setDirty(false); setMessage(''); setProfileNotice(null); setBusy(false)
+    setLibrary(null); setSelected(null); setDocument(null); setProfile(null); setReady(false); setDirty(false); setMessage(''); setSubmissionNotice(null); setProfileNotice(null); setBusy(false)
     operation.current = false; grant.current = null; pendingCreate.current = null
     const current = () => revision === generation.current
     void resumeBrowserSession().then(async session => {
@@ -79,14 +81,14 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
   })
   const select = (draft: CreatorDraft) => {
     if (dirty && !window.confirm('Leave unsaved edits?')) return
-    setSelected(draft); setDocument(structuredClone(draft.document)); setDirty(false); setPreview(false); setMessage('')
+    setSelected(draft); setDocument(structuredClone(draft.document)); setDirty(false); setPreview(false); setMessage(''); setSubmissionNotice(null)
   }
   const create = (skillId?: string) => run(async current => {
     if (dirty && !window.confirm('Leave unsaved edits?')) return
     if (!pendingCreate.current) pendingCreate.current = skillId ? { id: createIdempotencyKey(), skillId } : { id: createIdempotencyKey(), document: newCreatorDocument() }
     const result = await coreRequest<CreatorDraft>('/v1/studio/drafts', { method: 'POST', headers: headers(), body: JSON.stringify(pendingCreate.current) })
     if (!current()) return
-    pendingCreate.current = null; setSelected(result); setDocument(result.document); setDirty(false); setPreview(false)
+    pendingCreate.current = null; setSelected(result); setDocument(result.document); setDirty(false); setPreview(false); setSubmissionNotice(null)
     await load(current)
   })
   const change = (patch: Partial<CreatorDocument>) => { if (document) { setDocument({ ...document, ...patch }); setDirty(true) } }
@@ -98,13 +100,15 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
     setSelected(result); setDocument(result.document); setDirty(false); return result
   }
   const submit = () => run(async current => {
-    if (!selected) return
+    if (!selected || !document) return
+    const issues = creatorSubmissionIssues(document)
+    if (issues.length) throw new Error(`Complete before submitting: ${issues.join(', ')}.`)
     if (!window.confirm('Submit this saved version for review? It stays private until approved and cannot be edited during review.')) return
     const saved = dirty ? await save(current) : selected
     if (!saved || !current()) return
     const result = await coreRequest<CreatorDraft>(`/v1/studio/drafts/${saved.id}/submit`, { method: 'POST', headers: headers(), body: JSON.stringify({ revision: saved.revision }) })
-    if (current()) { setSelected(result); setDocument(result.document); setMessage('Submitted for review. Not public yet.'); await load(current) }
-  })
+    if (current()) { setSelected(result); setDocument(result.document); setSubmissionNotice({ kind: 'success', text: 'Submitted for review. This Path is private until approved.' }); await load(current) }
+  }, text => setSubmissionNotice({ kind: 'error', text }))
   const removeDraft = () => run(async current => {
     if (!selected) return
     const title = document?.title.trim() || 'Untitled Path'
@@ -160,10 +164,10 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
           <label>Title<input maxLength={120} value={document.title} onChange={e => change({ title: e.target.value })} /></label>
           <label>Path link<small>This becomes the Path’s public web address after publishing. Use short lowercase words separated by hyphens.</small><input maxLength={80} value={document.slug} onChange={e => change({ slug: e.target.value })} /></label>
           <label>Short summary<textarea rows={2} maxLength={300} value={document.summary} onChange={e => change({ summary: e.target.value })} /></label>
-          <label>Description<textarea rows={3} maxLength={4000} value={document.description} onChange={e => change({ description: e.target.value })} /></label>
+          <label>Description<small>Required for submission. Explain what the learner will build or practise.</small><textarea rows={3} maxLength={4000} value={document.description} onChange={e => change({ description: e.target.value })} /></label>
           <div className="studio-pair"><label>Subject<input maxLength={80} value={document.category} onChange={e => change({ category: e.target.value })} /></label><label>Language<input maxLength={40} value={document.language} onChange={e => change({ language: e.target.value })} /></label></div>
           <label>Estimated minutes<input type="number" min={1} max={10080} value={document.estimatedMinutes} onChange={e => change({ estimatedMinutes: Number(e.target.value) })} /></label>
-          {(['outcomes', 'prerequisites', 'supportedEnvironments'] as const).map(key => <label key={key}>{key === 'outcomes' ? 'Outcomes' : key === 'prerequisites' ? 'What learners need before starting' : 'Tools / environments'}<small>One per line, up to eight.</small><textarea rows={3} value={document[key].join('\n')} onChange={e => change({ [key]: lines(e.target.value) })} /></label>)}
+          {(['outcomes', 'prerequisites', 'supportedEnvironments'] as const).map(key => <label key={key}>{key === 'outcomes' ? 'Outcomes' : key === 'prerequisites' ? 'What learners need before starting' : 'Tools / environments'}<small>{key === 'prerequisites' ? 'Optional. One per line, up to eight.' : 'Required for submission. One per line, up to eight.'}</small><textarea rows={3} value={document[key].join('\n')} onChange={e => change({ [key]: lines(e.target.value) })} /></label>)}
           <fieldset className="studio-pricing"><legend>Access</legend><label><input type="radio" name="path-price" checked={document.priceNim === null} onChange={() => change({ priceNim: null })} /> Free</label><label><input type="radio" name="path-price" checked={document.priceNim !== null} onChange={() => change({ priceNim: '0.01' })} /> Paid with NIM</label>{document.priceNim !== null && <label>NIM price<input inputMode="decimal" value={document.priceNim} onChange={e => change({ priceNim: e.target.value })} /><small>Up to five decimal places. Payments go directly to your verified Nimiq address. Checkout remains disabled unless Core approves this recipient and network. USDT is not enabled in this beta.</small></label>}</fieldset>
           <fieldset className="studio-tags"><legend>Tags · choose up to twelve</legend>{library?.tags.map(tag => <label key={tag.slug}><input type="checkbox" checked={document.tags.includes(tag.slug)} onChange={e => change({ tags: e.target.checked ? [...document.tags, tag.slug] : document.tags.filter(t => t !== tag.slug) })} /> {tag.label}<small>{tag.family}</small></label>)}</fieldset>
           <div className="studio-heading"><h3>Steps · {document.steps.length}/24</h3><button className="text-button" type="button" disabled={document.steps.length >= 24} onClick={() => change({ steps: [...document.steps, newCreatorStep()] })}><Plus size={17} /> Add step</button></div>
@@ -172,10 +176,11 @@ export function CreatorStudioScreen({ account, signMessage, onBack, onPublishedC
             <label>Step title<input maxLength={120} value={step.title} onChange={e => stepChange(i, { title: e.target.value })} /></label><label>Instructions<textarea rows={4} maxLength={2000} value={step.summary} onChange={e => stepChange(i, { summary: e.target.value })} /></label>
             <label>Starting link (optional)<input type="url" value={step.workspaceLink?.url ?? ''} onChange={e => stepChange(i, { workspaceLink: e.target.value ? { title: step.workspaceLink?.title || 'Starting point', url: e.target.value } : null })} /></label>{step.workspaceLink && <label>Starting link name<input maxLength={90} value={step.workspaceLink.title} onChange={e => stepChange(i, { workspaceLink: { ...step.workspaceLink!, title: e.target.value } })} /></label>}
             <h4>Resources · {step.resources.length}/8</h4><small>Optional references for this step. They appear in this order; use the arrows to rearrange them.</small>{step.resources.map((resource, n) => <div className="studio-resource" key={n}><label>Resource name<input maxLength={90} value={resource.title} onChange={e => stepChange(i, { resources: step.resources.map((r, x) => x === n ? { ...r, title: e.target.value } : r) })} /></label><label>Secure link<input type="url" value={resource.url} onChange={e => stepChange(i, { resources: step.resources.map((r, x) => x === n ? { ...r, url: e.target.value } : r) })} /></label><div className="studio-reorder"><button className="secondary-button" disabled={n === 0} aria-label={`Move resource ${n + 1} up`} onClick={() => stepChange(i, { resources: moveItem(step.resources, n, n - 1) })}><ArrowUp size={16} /></button><button className="secondary-button" disabled={n === step.resources.length - 1} aria-label={`Move resource ${n + 1} down`} onClick={() => stepChange(i, { resources: moveItem(step.resources, n, n + 1) })}><ArrowDown size={16} /></button><button className="text-button" onClick={() => stepChange(i, { resources: step.resources.filter((_, x) => x !== n) })}>Remove resource</button></div></div>)}<button className="text-button" disabled={step.resources.length >= 8} onClick={() => stepChange(i, { resources: [...step.resources, { title: '', url: '' }] })}><Plus size={16} /> Add resource</button>
-            <label>Practice challenge<textarea rows={3} maxLength={500} value={step.challenge ?? ''} onChange={e => stepChange(i, { challenge: e.target.value })} /></label><label>Visible completion criteria<small>One per line, up to eight. Say what a fresh screen should show—not what the learner should claim.</small><textarea rows={3} value={step.rubric.join('\n')} onChange={e => stepChange(i, { rubric: lines(e.target.value) })} /></label><label>Hints (optional)<textarea rows={2} value={step.hints.join('\n')} onChange={e => stepChange(i, { hints: lines(e.target.value) })} /></label>
+            <label>Practice challenge<small>Required for submission. Give the learner one concrete action to complete.</small><textarea rows={3} maxLength={500} value={step.challenge ?? ''} onChange={e => stepChange(i, { challenge: e.target.value })} /></label><label>Visible completion criteria<small>Required for submission. One per line, up to eight. Say what a fresh screen should show—not what the learner should claim.</small><textarea rows={3} value={step.rubric.join('\n')} onChange={e => stepChange(i, { rubric: lines(e.target.value) })} /></label><label>Hints (optional)<textarea rows={2} value={step.hints.join('\n')} onChange={e => stepChange(i, { hints: lines(e.target.value) })} /></label>
           </details>)}
         </fieldset>}
-      {selected.status === 'draft' && <><p className="studio-action-help">Save keeps the Path private. Preview shows the learner view. Submit sends the latest saved revision for review and temporarily locks editing.</p><div className="studio-editor-actions"><button type="button" className="secondary-button" disabled={busy || !ready || !dirty} onClick={() => { void run(async current => { if (await save(current)) { await load(current); if (current()) setMessage('Draft saved.') } }) }}>Save draft</button><button type="button" className="primary-button" disabled={busy || !ready} onClick={() => { void submit() }}>Submit for review</button>{canDeleteCreatorDraft(selected.status) && <button type="button" className="studio-delete-button" disabled={busy || !ready} onClick={() => { void removeDraft() }}><Trash2 size={16} /> Delete draft</button>}</div></>}
+      {submissionNotice && <p className={`studio-submission-notice studio-submission-notice--${submissionNotice.kind}`} role={submissionNotice.kind === 'error' ? 'alert' : 'status'}>{submissionNotice.text}</p>}
+      {selected.status === 'draft' && <><p className="studio-action-help">Save keeps the Path private. Preview shows the learner view. Submit sends the latest saved revision for review and temporarily locks editing.</p><div className="studio-editor-actions"><button type="button" className="secondary-button" disabled={busy || !ready || !dirty} onClick={() => { void run(async current => { if (await save(current)) { await load(current); if (current()) { setMessage('Draft saved.'); setSubmissionNotice(null) } } }) }}>Save draft</button><button type="button" className="primary-button" disabled={busy || !ready} onClick={() => { void submit() }}>Submit for review</button>{canDeleteCreatorDraft(selected.status) && <button type="button" className="studio-delete-button" disabled={busy || !ready} onClick={() => { void removeDraft() }}><Trash2 size={16} /> Delete draft</button>}</div></>}
       {selected.status === 'review' && <p>In review. This snapshot is locked and stays private until approved.</p>}
       {selected.status === 'rejected' && <div className="studio-editor-actions"><button type="button" className="secondary-button" disabled={busy || !ready} onClick={() => { void run(async current => { const result = await coreRequest<CreatorDraft>(`/v1/studio/drafts/${selected.id}/revise`, { method: 'POST', headers: headers(), body: JSON.stringify({ revision: selected.revision }) }); if (current()) { select(result); await load(current) } }) }}>Revise this Path</button>{canDeleteCreatorDraft(selected.status) && <button type="button" className="studio-delete-button" disabled={busy || !ready} onClick={() => { void removeDraft() }}><Trash2 size={16} /> Delete draft</button>}</div>}
     </section>}

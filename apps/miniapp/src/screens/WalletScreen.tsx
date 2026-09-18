@@ -77,7 +77,7 @@ export function WalletScreen({ account, message, accessReady, loadWalletActivity
       </section>
 
       <section className="account-actions" aria-label="Truly wallet actions">
-        <button type="button" onClick={onSwitchAccount}><span className="account-actions__icon"><WalletCards size={18} /></span><span><strong>Switch account</strong><small>Choose another account shared by Nimiq Pay.</small></span><ExternalLink size={16} /></button>
+        <button type="button" onClick={onSwitchAccount}><span className="account-actions__icon"><WalletCards size={18} /></span><span><strong>Reconnect wallet</strong><small>Refresh the signing account from Nimiq Pay.</small></span><ExternalLink size={16} /></button>
         <button type="button" onClick={onOpenStudio}>
           <span className="account-actions__icon"><BookOpen size={18} /></span>
           <span><strong>Creator Studio</strong><small>Create free or paid Paths.</small></span>

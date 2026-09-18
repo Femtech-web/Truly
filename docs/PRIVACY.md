@@ -24,7 +24,7 @@ Listening stops during spoken playback, editing, Pause, Hide, Task changes, slee
 ## AI processing
 
 - Provider requests pass through Truly Core; API credentials never enter either client.
-- The runtime requires the configured provider’s Zero Data Retention setting.
+- The runtime requires the configured provider’s Zero Data Retention setting. Production remains fail-closed until the operator has confirmed ZDR in the provider console and recorded that confirmation in Core configuration.
 - Requests are authenticated, size-bounded, rate-limited and tied to an active Task and Mac.
 - Truly stores no frame, voice recording or raw model reasoning.
 - Minimal assessment receipts contain criterion statuses, request integrity data and resulting progress.

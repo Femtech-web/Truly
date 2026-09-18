@@ -26,7 +26,7 @@ An ordinary browser can preview the read-only catalog and layout, but it cannot 
 - Lets a learner start or continue a free executable Skill on one selected active Mac. Core validates ownership, device status, immutable version and entitlement, then creates/resumes the authoritative session for that desktop.
 - NIM and USDT checkout remain disabled. Progress shows an empty state until verified learning exists.
 
-Run Truly Core separately following `worker/README.md`. Set `VITE_TRULY_CORE_URL` in an ignored `.env` to the Mac's LAN API URL and allow the exact Vite origin on Core. Restart Vite when this configuration changes. Stop servers with Control–C after testing.
+Run Truly Core separately following `worker/README.md`. For development, set `VITE_TRULY_CORE_URL` in an ignored `.env` to the Mac's LAN API URL and allow the exact Vite origin on Core. Production always uses the Mini App's own origin because the Worker serves both the app and `/v1`; local LAN configuration is deliberately ignored in release bundles. Restart Vite when development configuration changes. Stop servers with Control–C after testing.
 
 ## Verify
 

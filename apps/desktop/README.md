@@ -1,6 +1,6 @@
 # Truly Desktop
 
-Native macOS menu-bar learning companion. It starts with a small teal pointer and a dismissible readiness greeting, not a large window.
+Native macOS menu-bar learning companion. Its menu-bar item uses Truly's monochrome ring-and-dot mark; the full-colour app icon remains in Finder and installation views. It starts with a small teal pointer and a dismissible readiness greeting, not a large window.
 
 Drag to position it beside your work. Click without dragging to capture that display before the workspace opens. Normal clicks in other apps do nothing. Truly's own windows are excluded. Closing the workspace clears the local image and question.
 
@@ -18,11 +18,13 @@ Practice lives in **Open Task → Overview → Check my work**, not the Explain/
 
 1. Open `Truly.xcodeproj`, select **Truly → My Mac**, then press Command–R.
 2. If signing needs setup: click the top blue project item, choose **TARGETS → Truly → Signing & Capabilities → Team**. The existing team configuration is preserved.
-3. Expect the teal companion near the right side of your main display and the Truly menu-bar icon.
+3. Expect the teal companion near the right side of your main display and Truly's ring-and-dot menu-bar mark.
 4. Click the companion. Allow Screen Recording when requested; enable Truly in macOS Privacy & Security and restart through Xcode if required.
 5. Close the workspace, bring your learning context forward, then click the companion again.
 6. Use the menu-bar icon → Settings → Connection to pair this Mac. Start a Task or Path from the Mini App on your phone.
 7. To try hands-free input: allow AI help in Settings → Privacy, close the typed bar, select Input → Voice, enable local listening and allow macOS Microphone/Speech Recognition. Say **Hey Truly, explain this page** and pause. Uncertain recognition opens for review. Select Pause to stop listening; Reply chooses Text or Spoken. Local support must be checked on the actual Mac.
+
+Settings → Connection names the active Core environment. The committed desktop build uses **Production Core · app.usetruly.site**. A pairing code exists only in the Core that created it, so a local desktop code cannot be entered into the production Mini App, and a production code cannot be entered into a local Mini App. Stop and rerun Truly through Xcode after changing endpoint configuration; an already running build retains the `Info.plist` compiled into its app bundle.
 
 ## Verification boundary
 
