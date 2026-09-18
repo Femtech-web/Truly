@@ -2,7 +2,7 @@
 
 Truly connects your phone, Nimiq wallet and Mac so learning can stay beside the real work. This guide explains the product as a learner or creator sees it. For implementation details, see the [architecture](ARCHITECTURE.md).
 
-> The current competition build is a working testnet preview. Test NIM has no real-world value, and the macOS app is not yet a public signed download.
+> Path payments currently use Nimiq Testnet. Test NIM has no real-world value.
 
 ## Start a learning session
 

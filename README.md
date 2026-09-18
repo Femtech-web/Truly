@@ -2,61 +2,36 @@
   <img src="apps/desktop/Truly/Assets.xcassets/AppIcon.appiconset/128.png" width="88" height="88" alt="Truly app icon" />
   <h1>Truly</h1>
   <p><strong>Learn anything. By doing it.</strong></p>
-  <p>A screen-aware learning companion that carries a goal from your Nimiq wallet to your Mac, teaches beside the real work, and saves progress only after you show what you did.</p>
+  <p>A wallet-connected learning system that moves a goal from your phone to your Mac, teaches beside the real work, and records progress only after you show what you did.</p>
   <p>
-    <a href="#the-loop">The product</a> ·
+    <a href="#how-truly-works">How it works</a> ·
     <a href="#why-nimiq">Why Nimiq</a> ·
-    <a href="#run-it-locally">Run it</a> ·
+    <a href="#retention-and-revenue">Product model</a> ·
+    <a href="#run-truly-locally">Run locally</a> ·
     <a href="docs/ARCHITECTURE.md">Architecture</a> ·
     <a href="docs/PRODUCT-GUIDE.md">Product guide</a>
   </p>
 </div>
 
-> Built for the Nimiq Mini Apps Competition. The current payment experience runs on Nimiq Testnet; test NIM has no real-world value.
+> **Network note:** NIM Path purchases currently use Nimiq Testnet. Test NIM has no real-world value.
 
-## The problem
+## Learning breaks when the work begins
 
-Learning usually breaks at the exact moment it should become useful.
+Tutorials are usually separate from the tool where someone is trying to make progress. A learner leaves the editor, browser or design application, searches for an explanation, loses context and still has to work out whether the result is correct.
 
-You leave the editor, browser or design tool. You open a tutorial. You lose the context. You collect information, but still do not know what to do next—or whether what you tried actually worked.
+Truly keeps learning attached to the task. A learner chooses a personal goal or creator-made Path on their phone, continues it on a paired Mac, and asks for help beside the exact thing they are looking at. Truly can explain the visible idea, guide one next action, listen to a spoken question and speak its answer back.
 
-Truly closes that gap. The learner chooses a goal on their phone, sends it to a paired Mac, and gets contextual help beside the application where the work is happening. A creator can turn expertise into a reviewed, ordered Path and choose to publish it for free or price it in NIM.
-
-## The loop
-
-```mermaid
-flowchart LR
-    A[Choose a goal<br/>or creator Path] --> B[Approve identity<br/>in Nimiq Pay]
-    B --> C[Continue on<br/>a paired Mac]
-    C --> D[Ask by text<br/>or voice]
-    D --> E[Learn beside<br/>the real work]
-    E --> F[Check my work]
-    F -->|criteria met| G[Save progress<br/>to the wallet owner]
-    F -->|not yet| E
-```
-
-On the Mac, the companion can sit beside any visible part of the screen. Ask it to explain what you see, guide one next action, or speak the question and let Truly speak back. Teaching and completion are deliberately separate: an answer never awards progress. **Check my work** captures fresh, visible evidence and advances only when every saved criterion is met.
-
-## What exists today
-
-| Surface | What it does |
-| --- | --- |
-| **Truly for macOS** | Draggable screen-aware companion; text and voice questions; Explain and Guide modes; optional spoken replies; Task panel, resources and explicit AI-checked practice. |
-| **Truly Mini App** | Nimiq wallet identity, account choice, signed Mac pairing, private Tasks, creator Paths, NIM testnet purchase, durable progress, devices and access activity. |
-| **Creator Studio** | Wallet-signed public profiles; private drafts; ordered steps and resources; free or NIM access; learner preview; locked submission; wallet-authenticated review and versioned publishing. |
-| **Truly Core** | Owner-scoped authority, pairing, sessions, immutable Path versions, guarded AI, independent payment verification, entitlements, progress and review receipts. |
-| **Product site** | Public product story plus a concise, non-technical `/docs` guide for learners and creators. |
-
-### Working proof, not a mock checkout
-
-- A real **0.01 test-NIM** purchase of *NIM payments users can trust* passed native Nimiq Pay confirmation, independent settlement checks and exactly-once Path unlock.
-- The purchased Path moved from phone to Mac, completed its first visible practice check, synchronized to **1 of 3**, and retained that progress after both clients restarted.
-- Real microphone input and spoken Truly replies have been exercised on the Mac.
-- Creator profiles, private drafts, free/NIM pricing, review decisions and frozen published versions are implemented and covered by the Core test suite.
-
-The full three-step Path rehearsal, hostile/unclear screen-quality matrix, broader voice-noise testing, hosted deployment and signed public macOS distribution remain release gates. Truly labels assessment **AI-checked**, never certified.
+When a step contains a practice goal, **Check my work** takes a fresh look at the visible result. Teaching never awards progress by itself; completion is a separate, deliberate action evaluated against the saved criteria.
 
 ## Product views
+
+### The companion beside the work
+
+<img src="output/truly-companion-in-context.png" alt="The Truly companion and its voice and text controls beside the Nimiq Provider documentation on macOS" />
+
+The native companion stays close to the current application. The learner can type or speak, receive a written or spoken answer, open the active Task and check completed work without leaving the screen they are learning from.
+
+### Phone, wallet and learning library
 
 <table>
   <tr>
@@ -68,40 +43,101 @@ The full three-step Path rehearsal, hostile/unclear screen-quality matrix, broad
   </tr>
 </table>
 
-## Tasks and Paths are different on purpose
+## How Truly works
 
-**A Task is yours.** Start with an immediate goal, review the proposed steps, edit the plan before beginning and keep the result private to your wallet.
+```mermaid
+flowchart LR
+    A[Choose a goal<br/>or creator Path] --> B[Approve identity<br/>with Nimiq Pay]
+    B --> C[Continue on<br/>a paired Mac]
+    C --> D[Ask by text<br/>or voice]
+    D --> E[Learn beside<br/>the real work]
+    E --> F[Check my work]
+    F -->|criteria met| G[Save progress<br/>to the wallet owner]
+    F -->|keep practising| E
+```
 
-**A Path is published expertise.** It has a creator, ordered steps, useful links, practice challenges, visible completion criteria, an immutable version and optional NIM access. Starting a Path creates a learner-owned Task, so progress belongs to the learner without mutating the creator’s original.
+| Surface | Responsibility |
+| --- | --- |
+| **Truly for macOS** | Draggable screen-aware companion, text and voice questions, spoken replies, Task context, resources and deliberate practice checks. |
+| **Truly Mini App** | Nimiq identity, account selection, signed Mac pairing, private Tasks, creator Paths, NIM purchases, devices, access and progress. |
+| **Creator Studio** | Public creator profiles, private drafts, ordered steps and resources, free or NIM access, learner preview, review and versioned publishing. |
+| **Truly Core** | Owner-scoped authority, sessions, immutable Path versions, payment verification, entitlements, AI boundaries, progress and review receipts. |
+| **Product website** | Product story and a concise learner-and-creator guide. |
 
-Creators can publish a Path for free or monetize it in NIM. Drafts stay private. Publishing requires review in this beta, and an approved update creates a new version so existing learners keep the exact plan they started.
+## Tasks and Paths
+
+### Tasks belong to learners
+
+A Task starts with an immediate goal. The learner reviews the proposed plan, can edit it before beginning and keeps it private to their wallet. The same Task and progress are available from the phone and the paired Mac.
+
+### Paths package useful expertise
+
+A Path is a creator-published learning product with ordered steps, explanations, resources, practice challenges and visible completion criteria. It can be free or priced in NIM. Starting a Path creates a learner-owned Task pinned to that approved version, so later creator updates never rewrite someone’s active plan.
+
+Creators work privately until submission. Review applies to an exact saved version, publication is attributed to an authorized reviewer, and approved updates create new versions rather than mutating history.
+
+## Retention and revenue
+
+Truly is designed to retain learners through continuity and useful progress rather than feeds, streak pressure or passive content consumption.
+
+- **Every goal becomes resumable work.** A Task remembers the current step and reopens at the first unfinished action.
+- **The phone and Mac have distinct jobs.** The phone owns discovery, wallet access and progress; the Mac stays beside the work. Moving between them does not reset context.
+- **Progress represents practice.** A learner returns to something they have actively started, with completed results and the next useful step visible.
+- **The wallet becomes a durable library.** Private Tasks, free Paths, purchased Paths and their approved versions remain connected to the same owner.
+- **Creators can improve without breaking trust.** New Path versions can become better products while existing learners retain the version they began.
+
+Revenue is attached to useful learning products:
+
+- Private Tasks and free Paths provide an open entry into Truly.
+- Truly Studio can publish first-party premium Paths priced in NIM.
+- Independent creators can choose free access or receive NIM for a paid Path through their verified wallet identity.
+- Every paid unlock shows the version, price, network, creator and recipient before Nimiq Pay asks for approval.
+- Access remains with the wallet owner after Core verifies settlement; the product does not depend on advertising or custody of learner funds.
+
+The current implementation does not claim an automatic marketplace commission or subscription. See the [product model](docs/PRODUCT-MODEL.md) for the complete retention and commercial logic.
 
 ## Why Nimiq
 
-Nimiq is not a checkout button attached to Truly. It is the ownership layer connecting the whole experience.
+Nimiq is the ownership and payment layer joining the entire product—not a checkout button added at the end.
 
-1. **Identity without another password.** A purpose-bound wallet signature proves which learner, creator or reviewer is acting. A pasted public address is never treated as ownership.
-2. **Deliberate device trust.** The wallet approves the exact Mac being paired, while revocation remains available from the phone.
-3. **Native creator commerce.** A Path shows its version, price, network, creator and recipient before Nimiq Pay presents the transaction. Truly never handles wallet keys.
-4. **Independent access decisions.** Core does not trust a client-side “success.” It verifies the finalized transfer and grants one durable entitlement exactly once.
-5. **Portable continuity.** Purchases, Tasks, Path versions and progress stay bound to the wallet owner across phone and Mac.
+1. **Wallet-owned identity** — purpose-bound signatures establish which learner, creator or reviewer is acting without creating another password system.
+2. **Deliberate device trust** — the wallet approves the exact Mac being paired, and the phone can revoke that device later.
+3. **Native creator payments** — a paid Path shows its version, NIM amount, network, creator and recipient before Nimiq Pay presents the transaction.
+4. **Independent access decisions** — Truly Core verifies the executed and finalized transfer before writing one durable entitlement.
+5. **Portable continuity** — purchases, Tasks, Path versions and progress remain attached to the wallet owner across phone and Mac.
 
-Nimiq Pay remains authoritative for the complete wallet portfolio and transaction history, including wallet-managed contract funds. Truly intentionally shows only the Path payments and access it has independently validated.
+Truly never receives wallet keys or recovery words. Nimiq Pay remains the source of truth for the complete portfolio and wallet history; Truly shows only the Path payments and access it has independently validated.
 
-## Trust is a product feature
+## End-to-end product integrity
 
-| Promise | Enforcement |
+The purchase and learning flow crosses the real product boundaries:
+
+1. Nimiq Pay exposes the accounts the wallet has chosen to share.
+2. A purpose-bound signature connects the learner and authorizes a selected Mac.
+3. Truly Core creates an immutable order from the approved Path version and creator recipient.
+4. Nimiq Pay shows the native transaction confirmation and sends the payment only after learner approval.
+5. Core independently checks execution, finality, recipient, amount and order memo before granting access exactly once.
+6. The unlocked Path becomes a wallet-owned Task that can be handed to the paired Mac.
+7. A deliberate practice check advances the saved step only when every visible criterion is met.
+8. Progress survives client restarts and resumes from the first unfinished step.
+
+This flow has been exercised with a **0.01 test-NIM** Path purchase, native Nimiq Pay approval, independent settlement verification, Mac handoff and durable practice progress.
+
+## Trust is part of the product
+
+| Promise | Product enforcement |
 | --- | --- |
 | **No background screen history** | A bounded frame leaves the Mac only after Ask, an explicitly completed voice question or Check my work. Truly does not persist screenshots. |
-| **Teaching cannot fake progress** | The teaching endpoint always returns `progressRecorded: false`; assessment is a separate authenticated action. |
-| **The wallet stays in charge** | Pairing, sign-in and payment use Nimiq Pay confirmations. Truly never asks for recovery words or private keys. |
-| **Clients do not grant themselves access** | Core resolves the current price/version and independently verifies settlement before writing an entitlement. |
-| **Creator updates cannot rewrite history** | Learner Tasks pin an approved Path version and access snapshot. Later updates append a version. |
-| **Review authority is server-owned** | Reviewer wallets come from a server allowlist and approve a locked revision with an auditable wallet identity. |
+| **Teaching cannot fake progress** | Teaching always reports that progress was not recorded. Assessment is a separate authenticated action. |
+| **The learner stays in control** | Truly points and explains; it does not operate the keyboard, pointer, application or wallet. |
+| **The wallet stays in charge** | Pairing, identity and payment use Nimiq Pay confirmations. Truly never asks for private keys or recovery words. |
+| **Clients cannot grant themselves access** | Core resolves the live price and version, verifies settlement and writes the entitlement atomically. |
+| **Published learning stays stable** | Learner Tasks pin an approved Path version. Creator updates append a new version. |
+| **Review authority is server-owned** | Reviewer wallets come from a server allowlist and decide on a locked submitted revision. |
 
-Read the full [privacy direction](docs/PRIVACY.md), [architecture](docs/ARCHITECTURE.md) and [Creator Studio operating guide](docs/CREATOR-STUDIO.md).
+Read the [privacy model](docs/PRIVACY.md), [AI boundary](docs/AI.md), [architecture](docs/ARCHITECTURE.md) and [Creator Studio guide](docs/CREATOR-STUDIO.md).
 
-## Architecture at a glance
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -130,19 +166,21 @@ flowchart TB
     K --- D
 ```
 
-The wallet never exposes keys to the Mini App. The desktop cannot manage wallet devices or buy a Path. The Mini App cannot invent completion. Core is the only authority that joins identity, device, immutable content, payment access and current progress.
+Authority is intentionally split. The wallet approves identity, devices and payments. The Mac owns deliberate capture and the learning interaction. Core is the only component allowed to combine owner identity, device authority, immutable content, verified payment access and current progress.
 
-## Run it locally
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full boundaries and data flows.
+
+## Run Truly locally
 
 ### Requirements
 
 - macOS with Xcode
 - Node.js 22.13 or newer
-- Nimiq Pay on a phone for native wallet/signature/payment flows
-- A Cloudflare account only if you choose to deploy; local D1 works without one
-- A Groq API key and confirmed Zero Data Retention setting for AI requests
+- Nimiq Pay on a phone for native wallet, signature and payment flows
+- A Groq API key with Zero Data Retention enabled for AI requests
+- A Cloudflare account only for deployment; local D1 runs without one
 
-Clone and enter the repository:
+Clone the repository:
 
 ```bash
 git clone https://github.com/Femtech-web/Truly.git
@@ -159,7 +197,7 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Set the exact Mini App origin in `ALLOWED_ORIGINS` and `PAIRING_ORIGIN`. For phone testing, use the Mac’s LAN address rather than `localhost`. Keep payment flags off unless you are following the controlled testnet procedure in [worker/README.md](worker/README.md).
+Set the Mini App origin in `ALLOWED_ORIGINS` and `PAIRING_ORIGIN`. For phone testing, use the Mac’s LAN address rather than `localhost`. Keep payment flags off unless you are following the controlled Nimiq Testnet setup in [worker/README.md](worker/README.md).
 
 ### 2. Start the Mini App
 
@@ -172,15 +210,15 @@ cp .env.example .env
 npm run dev -- --host 0.0.0.0
 ```
 
-Set `VITE_TRULY_CORE_URL` to the Core URL reachable from the phone, then open Vite’s Network URL inside Nimiq Pay. A normal browser can preview public screens but cannot supply wallet identity.
+Set `VITE_TRULY_CORE_URL` to the Core URL reachable from the phone, then open Vite’s Network URL inside Nimiq Pay. A regular browser can preview public screens but cannot supply wallet identity.
 
 ### 3. Run Truly for macOS
 
-Open `apps/desktop/Truly.xcodeproj`, select **Truly → My Mac**, and press **Command–R**. Grant Screen Recording when macOS asks. Microphone and Speech Recognition are separate, optional permissions used only for voice.
+Open `apps/desktop/Truly.xcodeproj`, select **Truly → My Mac**, and press **Command–R**. Grant Screen Recording when macOS requests it. Microphone and Speech Recognition are separate, optional permissions used only for voice.
 
 Open the menu-bar app, go to **Settings → Connection**, and pair the Mac from the Mini App’s **Devices** screen.
 
-### 4. Optional: run the product site
+### 4. Run the product site
 
 ```bash
 cd apps/site
@@ -188,13 +226,11 @@ npm install
 npm run dev
 ```
 
-Visit `/docs` for the learner-and-creator guide.
-
-Stop each development server with **Control–C** when finished.
+Visit `/docs` for the non-technical learner-and-creator guide. Stop each development server with **Control–C** when finished.
 
 ## Verification
 
-No command below needs a wallet, real funds or an external AI request:
+These commands use local fixtures and require no wallet, funds or external AI request:
 
 ```bash
 # Core protocol, persistence, payments and Creator Studio
@@ -207,7 +243,7 @@ cd apps/miniapp && npm test && npm run build
 cd apps/site && npm run build
 ```
 
-The native Mac target is also checked with Swift typechecking and focused policy tests. Real Screen Recording, Nimiq Pay, microphone, WebView and end-to-end payment behavior remain physical-device acceptance—not something a unit test can honestly claim.
+The native target is checked with Swift typechecking and focused policy tests. Wallet confirmations, Screen Recording, microphone, speech, WebView behavior and cross-device handoff are validated separately on physical devices.
 
 ## Repository map
 
@@ -220,20 +256,21 @@ worker/          Truly Core (Cloudflare Worker and D1)
 packages/
   contracts/     Shared API contracts
   design-tokens/ Cross-surface brand primitives
-  skill-schema/  Legacy internal Path manifest package
+  skill-schema/  Shared legacy manifest compatibility
 migrations/      Ordered D1 schema and seed migrations
-docs/            Public architecture, privacy and operating guides
+docs/            Product, architecture, privacy and operating guides
 ```
 
-Learner-facing language uses **Task** and **Path**. Some internal APIs still retain `skill` identifiers for compatibility; see the [domain glossary](CONTEXT.md).
+Learner-facing language uses **Task** and **Path**. Some internal APIs retain `skill` identifiers for backward compatibility; see the [domain glossary](CONTEXT.md).
 
-## What is next
+## Documentation
 
-- Complete the remaining steps and negative cases in the physical Path rehearsal.
-- Exercise voice false wakes, unclear speech, spoken-answer self-triggering and offline recovery across real environments.
-- Deploy Core and the Mini App behind production HTTPS/same-site session boundaries.
-- Ship a signed, notarized macOS build and public support/privacy surfaces.
-- Keep USDT disabled until a separately approved, tightly bounded real-mainnet test exists.
+- [Product guide](docs/PRODUCT-GUIDE.md) — how learners and creators use Truly
+- [Product model](docs/PRODUCT-MODEL.md) — retention, creator economics and product revenue
+- [Architecture](docs/ARCHITECTURE.md) — components, authority and data flows
+- [Privacy](docs/PRIVACY.md) — capture, voice, wallet and retention boundaries
+- [AI boundary](docs/AI.md) — teaching, assessment and model safeguards
+- [Creator Studio](docs/CREATOR-STUDIO.md) — authoring, review and versioning
 
 ## License
 

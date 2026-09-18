@@ -1,59 +1,74 @@
-# Creator Studio beta
+# Creator Studio
 
-Open **Learn → Explore Paths → Create Path** (or **Wallet & access → Creator Studio**). Any Nimiq wallet can author after a deliberate Creator Studio signature. That approval creates a public creator profile, lasts 15 minutes, cannot send money and cannot publish without separate review. Ordinary learner sign-ins do not gain creator or reviewer scopes. Suspension is enforced on every Studio request.
+Creator Studio lets a Nimiq wallet turn useful know-how into a reviewed learning Path. Any non-suspended wallet can deliberately approve creator access, create a public profile and work privately until submission.
 
-Creators can edit their public name/bio/optional HTTPS avatar; author private, subject-agnostic Paths; add/reorder up to 24 steps and eight resources per step; choose Free or NIM pricing; preview; save; and submit an immutable review snapshot. Steps have instructions, a starting link, challenge, visible completion criteria and optional preview hints. Profile slugs are assigned by Core when the wallet first signs creator access. Failed saves/expired approval keep unsaved edits on the current screen, not in browser storage. Leaving/reloading loses unsaved edits.
+## Creator identity
 
-Private **Draft** and **Changes requested** versions can be removed from the Path editor with **Delete draft** and an explicit confirmation. A brand-new abandoned draft also removes its unpublished Path shell. Deleting a draft update never deletes the already-published Path or any learner version. **In review** snapshots cannot be deleted or edited; the reviewer must publish or request changes first so the submitted evidence cannot change underneath review.
+Opening Creator Studio requests a purpose-bound wallet signature. Core verifies the challenge before granting creator scopes. This approval cannot send funds, publish content or grant review authority.
 
-The NIM recipient is the signed creator identity, never an editable payout field. Paid listings do not imply active checkout: Core still requires the configured network, payment switch, active creator and approved recipient. The local controlled recipient is the seller wallet, which already owns the `truly-studio` record. Other creators can save/submit paid Paths, but their checkout is not enabled merely by publication. USDT and verified EVM payout editing remain disabled/deferred.
+The public creator profile contains:
+
+- display name;
+- bio;
+- optional avatar URL;
+- public wallet-linked creator identifier;
+- published Path library.
+
+The NIM recipient is the verified creator wallet, not an editable payout field. Truly never asks for private keys or recovery words.
+
+## Build a Path
+
+A draft can define:
+
+- title, link and summary;
+- learner outcome and prerequisites;
+- estimated time, difficulty, tags and supported tools;
+- ordered steps and explanations;
+- primary workspace links and supporting resources;
+- practice goals and visible completion criteria;
+- free access or a NIM price.
+
+Steps and resources can be added, edited, removed and reordered. Drafts remain private and can be deleted while they are editable.
+
+## Preview and submit
+
+Preview uses the learner-facing Path layout so the creator can inspect the outcome, access terms and full sequence before submission.
+
+Submitting locks an exact saved revision. That snapshot cannot be changed during review, which ensures the reviewer evaluates the same content that could become public.
 
 ## Wallet-authenticated review
 
-Apply migrations through 0014 before running updated Core. From `worker`:
+Review authority comes from a server-owned wallet allowlist. An authorized wallet approves a separate review challenge, then receives short-lived scopes for the review queue. Creator status alone never grants reviewer access.
 
-```sh
-npm run db:migrate:local
-node scripts/creator-review.mjs setup-wallet PUBLIC_ADMIN_NQ_ADDRESS
-```
+A reviewer can:
 
-Setup adds the public address to server-owned `REVIEWER_WALLETS` in ignored `.dev.vars`, preserving existing settings. The user authorized learner `NQ47…2AG1` locally. No production admin is hardcoded. Restart the existing Core process; do not start a duplicate server. Hosted Core must configure its own comma-separated allowlist, never a `VITE_*` variable. Empty/missing configuration grants nobody review access.
+1. open the exact submitted learner preview;
+2. inspect the outcome, resources, instructions and completion criteria;
+3. approve the revision for publication; or
+4. reject it with notes for the creator.
 
-1. A creator saves a complete Path and submits it. Its exact revision becomes **In review** and cannot be edited.
-2. Connect the authorized admin wallet. Open Creator Studio and approve creator access if needed; **Open review queue** appears only for an authorized wallet.
-3. Open the queue and deliberately approve reviewer access. This separate 15-minute signature cannot send money.
-4. Select a snapshot. Exercise every step in its real environment and inspect accuracy, content rights, links, visible criteria, environment, price and NIM recipient.
-5. Add review notes. **Request changes** rejects with those notes; the creator can revise/save/resubmit. **Approve and publish** requires the explicit review statement and confirmation, and publishes exactly that revision.
+Core checks the reviewer scope and live server allowlist for every queue read and decision. Approval publishes the locked revision and stores the public reviewer identity and decision atomically.
 
-The review statement is a human attestation, not automated proof of quality. Core independently checks the live admin allowlist, review scopes, expiry, revision and snapshot state on every decision. Ordinary creator authority cannot publish. The audit receipt records the reviewer wallet. A reviewer may also be a creator; self-review is labelled and recorded, not silently represented as independent approval.
+## Versions protect learners
 
-### Operator CLI fallback
+Publication never mutates an existing learner’s plan. Starting a Path creates a wallet-owned Task pinned to that approved Path version and its free-or-paid access snapshot.
 
-The old server-secret CLI remains available to the operator, separate from wallet review. `node scripts/creator-review.mjs setup-local` generates an ignored local key without printing it. Set `CREATOR_REVIEW_TOKEN` only as a server secret for hosted use.
+When a creator edits a published Path, the submitted update becomes a new version. New learners receive the latest approved version; existing learners keep the one they started.
 
-```sh
-node scripts/creator-review.mjs list
-node scripts/creator-review.mjs show DRAFT_ID
-node scripts/creator-review.mjs reject DRAFT_ID REVISION "Clarify what the learner should show."
-node scripts/creator-review.mjs publish DRAFT_ID REVISION "Exercised the steps and reviewed resources and criteria."
-```
+## Free and paid access
 
-The legacy CLI endpoints refuse browser Origin headers and creator grants; the new wallet queue uses authenticated browser account/CSRF checks. Publication, new version, tags, price and audit receipt commit atomically; collisions roll back everything. Rejection includes notes and permits deliberate revision/resubmission.
+A creator may publish for free or set a NIM price. A paid listing shows the version, amount, network, creator and recipient before Nimiq Pay requests native approval.
 
-The CLI defaults to loopback. Approved hosted review can use `TRULY_REVIEW_CORE_URL=https://...` and an operator `CREATOR_REVIEW_TOKEN` environment value. HTTPS or loopback HTTP only. Never share credentials/signatures in logs or screenshots.
+Publication and checkout are separate authorities. Truly Core still resolves the active approved version and creator recipient, prepares an immutable order and independently verifies the finalized NIM transfer before granting access.
 
-## Frozen updates and public profiles
+## Connect or switch wallets
 
-Draft an update clones a published Path; approval appends a version. Existing learner Tasks keep their original version/content/criteria, title/summary/author snapshot and free/paid access. A formerly free version stays free when the new listing becomes paid. Existing entitlements represent lifetime Path ownership under the current policy.
+**Connect wallet** lists accounts exposed by Nimiq Pay and asks the user to choose one. Truly does not silently take the first address and cannot create, import or switch the signing account inside Nimiq Pay.
 
-Tap **By [creator]** on Path detail for the public profile/published library. Public catalog/profile endpoints never expose drafts or private learner Tasks.
+**Wallet & access → Switch account** uses the same chooser. The current server sign-in must be revoked before the new identity is committed. Changing identity clears private screens and permission state; purchases, Tasks and paired Macs remain attached to their original wallet owner.
 
-Public paid listings show curriculum titles, not step instructions/resources/challenges/criteria. The complete plan is delivered by the authenticated entitlement-checked learner Task/runtime. Only approved versions from non-suspended creators appear in discovery.
+Related documentation:
 
-## Connect and switch accounts
-
-**Connect wallet** opens a bottom sheet. **Connect through Nimiq Pay** deliberately requests exposed addresses, then the user chooses one; Truly no longer selects the first address automatically. **Wallet & access → Switch account** uses the same chooser. Logout must succeed before a switch commits, and changing identity remounts all private screens/permissions. Purchases, Tasks and paired Macs remain saved under their original owner.
-
-Truly cannot create/import wallets or choose the host's signing account. If only one address appears, select another account inside Nimiq Pay, reopen Truly and refresh accounts. A signature from a different account is rejected by Core with a useful message. Discovery cancellation leaves the current identity untouched. Actual multi-account exposure and host signing require a physical Nimiq Pay test.
-
-Local SQL/signature tests and browser fixtures are not native wallet acceptance, live instructional-quality assessment or payment proof. Run Test CS and the reliability matrix in the living playbook. Test P's first-step assessment/phone-sync/restart slice now passes by user report; full Path completion and negative-case quality remain pending. Permissionless publishing, verified EVM payout editing, marketplace splits, public refund/creator terms, signup abuse hardening and hosting remain outside this beta slice.
+- [Product guide](PRODUCT-GUIDE.md)
+- [Architecture](ARCHITECTURE.md)
+- [Privacy](PRIVACY.md)

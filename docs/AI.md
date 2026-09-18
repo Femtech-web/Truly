@@ -1,17 +1,48 @@
-# AI runtime direction
+# AI teaching and assessment
 
-Text Ask and completed explicitly enabled Hey Truly questions connect to Core's guarded learning boundary, but live-model quality acceptance is pending. Capturing by itself remains local; question submission sends the bounded frame after the current Groq disclosure is approved. That versioned choice is remembered locally until revocation and asks again when the disclosure changes. No canned teaching answer or completion credit is presented as AI output.
+Truly uses AI for contextual teaching, personal Task planning and visible practice assessment. The model is always behind Truly Core; clients never receive provider credentials or call the provider directly.
 
-The first runtime will evaluate a free-tier Groq vision model through Truly Core. [Groq documents image/text input and JSON mode](https://console.groq.com/docs/vision). Quality, model access and quotas must pass screenshot-grounding and rubric tests before release.
+## Deliberate input
 
-Only a deliberate question or Task-panel Check my work may upload one bounded JPEG after processor-specific consent. Keys stay on Core. Truly does not store frames; provider retention is a separate disclosure. The runtime refuses inference unless the deployed environment confirms [Groq Zero Data Retention](https://console.groq.com/docs/your-data) is enabled.
+A screen frame can leave the Mac only when the learner:
 
-Core authenticates the desktop, resolves the active wallet/device session to either a private Task or immutable Path, limits size/rate/concurrency, then validates structured model output and coordinates. AI cannot invoke wallets, grant entitlements or directly award completion. The teaching endpoint always reports that progress was not recorded. The separate practice endpoint validates complete criterion observations and conservatively advances only when every criterion is met at confidence ≥0.85; application code owns the transaction and next step. This is fallible AI-checked progress, not independently verified software execution or certification. Insufficient/hidden evidence cannot pass. Free-tier exhaustion must produce clear recovery, never silent paid fallback.
+- submits a typed question;
+- completes an explicitly enabled voice question; or
+- chooses **Check my work**.
 
-New private Task plans include saved practice challenges/criteria for visible learner work; knowledge Tasks can request the learner's own written explanation. Older plans without criteria remain usable for teaching but cannot acquire invented completion credit. Real quality acceptance must include incomplete work, documentation-only screens, unclear context and hostile on-screen instructions. Unit tests verify the protocol/persistence policy, not the model's accuracy.
+Capture alone remains local. The request requires an authenticated desktop session, an active Task, a current processor disclosure and a bounded JPEG. Truly does not retain the frame as a screenshot history.
 
-Personal plans use the goal plus optional resource names/domains, not fetched page contents. The planner chooses 1–8 useful steps based on complexity, preserves conceptual vs practical intent, avoids default Mac titles and unrequested installation/coding, and must not invent commands or package names. A broad goal becomes an honestly described first milestone rather than an unsupported promise of mastery. Draft plans can be reviewed/edited before starting; started plans and creator Path versions cannot be rewritten through learner editing. Prompt checks do not prove real model compliance: test understanding-only, small and practical goals on actual Groq before accepting plan quality.
+## Teaching
 
-Voice mode separately opts in to local **Hey Truly** and question recognition with Apple Speech. It requires on-device support and never streams ambient audio to Groq. A completed, confident question invokes one capture and sends question text/frame through the same consented vision endpoint; uncertain recognition requires review. Voice follows the cursor but movement never captures. Unsupported recognition offers Text or the deliberate **Record a question** action. [Apple on-device support](https://developer.apple.com/documentation/speech/sfspeechrecognizer/supportsondevicerecognition).
+Core resolves the exact Task, immutable Path version and current step before building the model request. The teaching endpoint validates structured output and always reports `progressRecorded: false`.
 
-Record a question uses Groq's `whisper-large-v3-turbo` through Core for only that requested bounded audio. The Mac deletes the temporary file and Core does not persist it. Reply speech uses the built-in macOS synthesizer, with wake listening suspended during playback. Input and reply preferences are separate; microphone/wake quality still requires native acceptance. [Groq speech-to-text](https://console.groq.com/docs/speech-to-text), [Groq rate limits](https://console.groq.com/docs/rate-limits).
+Explain mode focuses on the visible concept and why it behaves that way. Guide mode returns one useful, evidence-aware next action. Neither mode can operate the Mac, invoke the wallet, grant an entitlement or mark a step complete.
+
+## Practice assessment
+
+**Check my work** is a separate authenticated request against the criteria saved with the current step. The assessor must return one concrete observation for every criterion. Core rejects incomplete coverage, unknown statuses, invalid confidence values and empty evidence.
+
+Progress advances only when every criterion is met at the configured confidence threshold. The application—not the model—owns the database transaction, idempotency and next-step calculation. Stored receipts contain sanitized statuses and request integrity data rather than frames or raw model reasoning.
+
+Assessment is labelled **AI-checked**, not certified. Visible evidence cannot prove hidden behavior, and a documentation page or unsupported claim is not accepted as completed practical work.
+
+## Personal Task planning
+
+The planner receives the learner’s goal and optional resource names or domains. It does not fetch linked pages or claim to have read them. It returns a focused plan with the smallest useful number of steps, preserves conceptual versus practical intent, and attaches visible practice criteria where appropriate.
+
+The learner reviews and can edit a private plan before starting. Once work has begun, its criteria and history are not silently rewritten.
+
+## Voice
+
+Hands-free **Hey Truly** recognition uses Apple Speech on-device. Ambient audio and recognition text are not uploaded. A completed confident question invokes the same deliberate screen-aware teaching request; uncertain speech opens for review.
+
+**Record a question** is a separate user action that sends bounded temporary audio through Core for transcription. The Mac deletes its local recording after reading it, and Core does not persist the upload. Spoken replies use the built-in macOS synthesizer, with wake listening suspended during playback.
+
+## Provider boundary
+
+The deployed runtime requires the configured provider’s Zero Data Retention setting. Core applies authenticated size, rate and concurrency limits and refuses malformed provider output. Provider identity and processing are disclosed before the first request and whenever that disclosure changes.
+
+Related documentation:
+
+- [Privacy](PRIVACY.md)
+- [Architecture](ARCHITECTURE.md)

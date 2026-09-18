@@ -102,7 +102,7 @@ export function DocsPage() {
             <details><summary>Why is my Nimiq Pay balance different?</summary><p>Nimiq Pay is the source of truth for the complete portfolio, including wallet-managed funds. Truly shows its own validated Path payments and access—not a partial balance.</p></details>
             <details><summary>Can I paste a wallet address into Truly?</summary><p>No. A pasted address does not prove ownership. Create or import accounts in Nimiq Pay, then choose an account the wallet securely shares with Truly.</p></details>
             <details><summary>Why can’t I change a submitted Path?</summary><p>The submitted version stays locked so the reviewer sees exactly what could be published. If it is rejected, you can revise or delete the private draft.</p></details>
-            <details><summary>Can I download Truly?</summary><p>Not publicly yet. The native macOS app is in real-device testing; a signed public build follows the competition preview.</p></details>
+            <details><summary>Can I download Truly?</summary><p>Not publicly yet. The native macOS app is in real-device testing; a downloadable .dmg follows the competition preview.</p></details>
           </section>
         </div>
       </div>

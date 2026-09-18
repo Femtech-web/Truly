@@ -1,91 +1,157 @@
-# Architecture
+# Truly architecture
 
-Truly separates authority by surface:
+Truly separates authority across the wallet, phone, Mac and Core so no client can claim identity, payment, access or progress on its own.
 
-```text
-Website ───────────── product story, download, trust, Mini App deep link
-
-macOS Desktop ─────── screen/audio capture, AI teaching, pointer, Task runtime
-       │
-       ├───────────── Truly Core: pairing, sessions, entitlements, progress
-       │                                  │
-Nimiq Pay Mini App ─ wallet identity, signature, NIM purchase, device control
+```mermaid
+flowchart TB
+    subgraph Wallet[Phone · Nimiq Pay]
+      M[Truly Mini App]
+      N[Nimiq provider]
+    end
+    subgraph Mac[macOS]
+      D[Truly companion]
+      K[Keychain session]
+    end
+    subgraph Core[Truly Core · Cloudflare Worker + D1]
+      A[Identity and device authority]
+      T[Tasks, Paths and progress]
+      P[Payment verification and access]
+      R[Creator review and versions]
+      V[AI teaching and assessment boundary]
+    end
+    M <--> N
+    M <--> A
+    D <--> A
+    D <--> V
+    A --- T
+    T --- P
+    T --- R
+    K --- D
 ```
 
-## Practice and progress
+## Product surfaces
 
-Teaching and assessment are separate: `POST /v1/learning/turn` never changes progress. The Task panel's **Check my work** explicitly captures a fresh screen and submits to `POST /v1/learning/attempts` with remembered processor approval and an idempotency key. Core resolves the authenticated session and pinned criteria; clients cannot provide rubrics, progress counters or a next step.
+### Nimiq Pay Mini App
 
-The assessor returns one concrete observation per criterion. Core validates exact coverage, allowed statuses, finite confidence and nonempty evidence; every criterion must be met at confidence ≥0.85 before advancement. This conservative threshold is a policy, not a calibrated guarantee of accuracy. Hidden behavior or documentation alone cannot establish a completed learner attempt. The product labels outcomes **AI-checked**, not certified.
+The Mini App is the wallet-owned control surface. It requests accounts and signatures through providers injected by Nimiq Pay, then lets the user choose an exposed account explicitly. Truly cannot create or import a wallet, choose Nimiq Pay’s signing account, or access private keys.
 
-Migration 0011 stores only sanitized criterion statuses, a request hash and minimal receipts. A D1 batch atomically checks live device/credential, publication/access, active session and expected step, inserts the once-only outcome and updates the next step/Task completion. Duplicate keys cannot increment progress; changed requests conflict. A Task has only one active Mac session, and handoff recomputes the first unfinished step inside its transaction. Screens, learner notes, transcripts and raw model evidence are not persisted.
+The Mini App owns:
 
-Owner-scoped session reads include completed results. The Mini App refreshes with its live, fixed-duration signed grant; polling never opens wallet approval. The Mac restores the most recent active/completed result with its Keychain credential. Ambiguous network outcomes require refresh; there is no sensitive offline-frame queue. Inference-quality and physical-device completion acceptance must pass before payments.
+- wallet sign-in and account switching;
+- signed Mac pairing and revocation;
+- private Task creation and editing;
+- creator Path discovery and purchase;
+- Creator Studio and review access;
+- progress, devices and Truly-specific payment activity.
 
-Phase 6 keeps payment initiation and access authority separate. A scoped wallet signature may prepare/read purchases but cannot send funds. Core creates an immutable order from the current approved Path version, configured creator recipient and active database price. NIM payment still requires a native `sendBasicTransaction` approval; USDT requires a separate EVM account choice, order-bound typed signature, explicit Polygon switch and transfer approval. Core trusts neither client success nor a submitted hash: it checks Nimiq TestAlbatross execution/finality or a finalized Polygon receipt with exactly one canonical USDT Transfer, then writes settlement, validated purchase and one entitlement atomically. Nimiq Pay may spend from wallet-managed HTLC/vesting contracts; those transfers are accepted only when the signed wallet account is a verified creator/cosigner and every recipient, amount, order memo, execution and finality invariant matches. A transaction that has not reached the history node remains pending and recoverable; unrelated RPC errors never grant access. The Mini App does not mislabel the connected basic-address RPC balance as the complete Nimiq Pay portfolio: complete balance/history stays in Nimiq Pay while Truly shows its own purchase/access activity. Committed deployments keep both assets disabled by default. The ignored local acceptance configuration enables only a deliberately small NIM testnet price; USDT remains behind its separate Polygon-mainnet kill switch.
+### macOS companion
 
-## Task planning and browser resumption
+The native app is a menu-bar utility with a small draggable companion. AppKit owns the non-activating panels and cursor-adjacent answer card; SwiftUI owns the settings and Task surfaces.
 
-Direct Task generation preserves the requested goal: understanding does not imply installation/coding. Core asks Groq for 1–8 focused, checkable steps, choosing the smallest useful number for the goal rather than padding to three. Resource names/domains are hints only; pages, paths and query strings are not fetched or forwarded as page contents. The model must not invent installation commands or claim to have read a resource. Plan quality is still fallible and needs real-goal acceptance.
+The Mac owns deliberate screen and audio capture. Dragging, pointer movement and ordinary application clicks do not upload anything. The companion can be hidden without breaking handoff: a new phone activation produces a compact Task-ready notice while preserving the learner’s visibility preference.
 
-The learner reviews the suggested plan and may edit its title, outcome, steps and visible practice criteria through `POST /v1/tasks/:id/plan`. `tasks:edit` scope, ownership, direct/draft provenance, matching revision and absence of session history are enforced inside the update. Starting locks the plan; a published Path is immutable through this endpoint. Draft changes cannot fabricate progress.
+Desktop credentials are stored in Keychain. A desktop session can read only the Task assigned to that authenticated Mac and cannot manage wallet devices or initiate payments.
 
-After native signed approval, Core issues the existing fixed 15-minute scoped grant plus a host-only HttpOnly/SameSite=Strict cookie (Secure for production). `GET /v1/auth/session` validates the hashed token/expiry and returns account/scopes/expiry, never the token. Initialization resumes this previously approved Truly identity only when the Nimiq SDK is available; no background `listAccounts` or signing occurs. Tasks/paired Macs/progress then load automatically. An expired grant requires an explicit renewed approval, never an automatic signature or sliding extension.
+### Truly Core
 
-Cookie authentication requires the custom `x-truly-browser: 1` CSRF header and an allowlisted Origin (or verified same-origin fetch metadata for a configured proxy). Private operations additionally compare `x-truly-account` with the cookie's verified owner. Explicit invalid Authorization never falls back to cookie authority. Credentialed CORS admits configured origins only. `POST /v1/auth/session/logout` deletes the server grant and expires the cookie without revoking Macs. Failed logout remains visibly signed in with a recovery message, rather than pretending server revocation succeeded.
+Truly Core is a Cloudflare Worker backed by D1. It owns the durable relationships between wallet identity, devices, Tasks, immutable Path versions, payments, entitlements, progress and creator review.
 
-Mini App page/tab preferences alone live in sessionStorage; credentials and private Task data do not. Same-site app/API domains or a same-origin API proxy are required for production, not unrelated Vercel/workers.dev sites. Local development uses the same LAN host at ports 5173/8787; plain HTTP is a development exception. Cookie retention after WebView recreation still needs iPhone acceptance. A full storage purge cannot restore an approval; native wallet changes require deliberate reconnect rather than assuming a cached address is the current provider account.
+Core never accepts client claims such as “payment succeeded,” “this step is complete,” or “this wallet is an admin” without independently checking the authority and state required for that action.
 
-## Boundaries
+### Product website
 
-- The desktop observes only after deliberate invocation and never performs wallet operations.
-- The Mini App requests wallet operations through providers injected by Nimiq Pay; keys remain in the wallet.
-- The Core API owns durable cross-device state and external AI/speech secrets.
-- The website owns acquisition and distribution. It may link into Nimiq Pay but cannot impersonate its confirmations or grant entitlements.
+The public site explains the product and hosts the non-technical `/docs` guide. It contains no wallet authority and cannot create access or progress.
 
-## Planned technology
+## Identity and device pairing
 
-- Desktop: Swift and SwiftUI with AppKit where macOS overlay behavior requires it.
-- Mini App: React, TypeScript, and Vite with `@nimiq/mini-app-sdk`.
-- Website: React, TypeScript, and Vite, sharing brand tokens rather than wallet runtime code.
-- Core: Cloudflare Workers with D1 for the initial relational state.
+Wallet actions use short-lived, purpose-bound challenges. Core verifies the Nimiq signature and issues only the scopes required for the approved action. Browser sessions use an opaque server grant in a host-only HttpOnly, SameSite=Strict cookie; private requests also identify the expected wallet account.
 
-The Website and Mini App may share platform-neutral design tokens. They do not share wallet initialization or page-level UI because their hosts, audiences, and performance constraints differ.
+Mac pairing uses a hashed short code and one-use exchange secret. The phone signs the exact device request, Core binds the approved wallet and installation, and the Mac stores its resulting credential in Keychain. Revocation invalidates the device and its desktop sessions atomically.
 
-The desktop starts as a menu-bar utility with a small draggable teal companion and a user-dismissible notice. AppKit owns an explicit `NSStatusItem` and transient `NSPopover`, so the settings surface is closed on launch and always opens from the menu-bar icon instead of being restored as a free-floating window. `CompanionPanelController` owns the non-activating panel; `DesktopAppController` owns presentation; the learning model owns deliberate capture. A companion click captures the display at the click location before opening a compact Task-or-Path/mode/question bar. Hiding the companion hides the draggable orb and stops voice, but a new explicit phone handoff still produces one compact top-right Task-ready notice without revealing the orb or opening a link. The active step is available as secondary context in the tooltip and menu rather than being mistaken for connection status. The screenshot remains in memory and is not reproduced in the interface. Dragging and ordinary app clicks do not capture. ScreenCaptureKit excludes Truly's own windows. A validated answer closes the bar and appears in a complete, user-dismissible pointer card beside its target or the current cursor. Closing the workspace clears its frame and question.
+Changing wallet identity first revokes the current browser session, then remounts private screens and permission holders. Saved Tasks, purchases and paired devices remain attached to their original owner.
 
-Text Ask and completed explicitly enabled wake-word questions connect to Core's guarded Groq vision endpoint. The learner approves the current processor disclosure once; it is remembered locally until revocation in Settings. Capture alone remains local. Fixed teaching answers, synthetic completion and placeholder targets remain removed. Teaching never advances progress; explicit assessment is described above. See [AI direction](AI.md).
+## Tasks, Paths and versions
 
-The accepted production handoff begins either with a learner-authored Task or on Path detail in the Mini App. **Start on my Mac** lets the learner select an active paired Mac and sends a narrowly scoped, wallet-authorized activation command to Core. Starting a Path creates or resumes a Task backed by that immutable Path version; a direct Task has learner-owned goal context instead. Core—not either client—binds the wallet, selected device, Task, current step and any Path entitlement. The desktop polls for the selected session with its Keychain credential, announces the exact Task and step only when Core reports a new explicit activation/update, and uses them for every learning turn. Restoring an unfinished session at app startup updates learning context silently so the generic startup greeting is not replaced. The desktop never guesses learning context from a screenshot or keeps a production hardcoded Path.
+A **Task** is wallet-owned work. A learner can create one directly from a goal, review and edit its plan before starting, then resume the same progress on phone and Mac.
 
-The Mini App's Learn surface keeps these concepts visibly separate: **My Tasks** contains wallet-owned private work and **Explore Paths** contains creator-published products. New Task creation uses a focused bottom sheet with one required goal and optional reviewed links; Home stays an entry and resume surface rather than duplicating the learner's library.
+A **Path** is creator-published content. Starting one creates or resumes a learner-owned Task pinned to the approved Path version. Creator updates append a new version; they do not rewrite the plan or access terms already attached to an existing learner.
 
-Creator Paths and learner Tasks have separate persistence and provenance but return one session envelope to the Mac. A direct Task is private, free and wallet-owned; Core generates its short plan, the learner reviews it before activation, and no creator, price or entitlement is invented. Starting a Path creates or reuses a wallet-owned Task pinned to its immutable Path version; My Tasks includes it with its creator provenance. The original Path-session tables remain readable only for development compatibility. Learning turns identify the authenticated session instead of trusting client-supplied Path identity, so Core resolves the exact Task or immutable Path context bound to the Mac.
+Steps may include one primary workspace link and bounded supporting resources. Links are treated as untrusted content: secure web URLs are accepted, embedded credentials and unsupported schemes are rejected, and activating a Task never opens a destination automatically. The Mac shows the domain and waits for an explicit local Open action.
 
-Task and Path steps may carry one primary workspace link plus supporting resources. Links are untrusted content: Core accepts HTTPS and loopback HTTP for local development, rejects embedded credentials and remote plain HTTP, and bounds the resource count. Activating a session never opens a URL. The Mac first shows **Open _domain_** in a persistent notice or Task panel; only that explicit local action calls `NSWorkspace`. Supporting resources remain in a separate Task panel.
+## Payment and entitlement flow
 
-Text and Voice are separate persisted input preferences. Text uses a draggable companion and a microphone-free Explain/Guide/question bar. Voice uses an offset cursor-follow companion without click interception. `LocalVoiceService` requires Apple's on-device recognition for **Hey Truly** and the activated question. It bounds recognition segments, stops the microphone at utterance end and waits briefly for final confidence. Ambient audio/text are never uploaded or logged; uncertain or partial recognition opens for review. `TrulyVoiceEligibility` gates listening on local opt-in, pairing, active Task, processor approval, visibility and pause state. Unsupported recognition produces explicit recovery, not a cloud ambient fallback.
+```mermaid
+sequenceDiagram
+    participant L as Learner
+    participant M as Mini App
+    participant W as Nimiq Pay
+    participant C as Truly Core
+    participant N as Nimiq network
+    L->>M: Choose paid Path
+    M->>C: Prepare immutable order
+    C-->>M: Version, amount, creator, recipient, memo
+    M->>W: Request native payment approval
+    W->>L: Show transaction confirmation
+    L->>W: Approve
+    W->>N: Broadcast transaction
+    M->>C: Submit transaction hash
+    C->>N: Verify execution and finality
+    C->>C: Write settlement and entitlement atomically
+    C-->>M: Path unlocked
+```
 
-A completed voice question captures one display at the wake pointer location before activating any Truly UI, then uses the existing authenticated vision endpoint. Text and voice send a validated normalized focus point as an approximate area of interest—not proof of a specific element. Movement and ordinary app clicks never capture. Task changes, hiding, privacy revocation, editing, sleep and logout stop recognition; voice starts paused across app restart. macOS spoken playback suspends wake listening, including a short cooldown.
+Core creates the order from the approved Path version, active NIM price and creator recipient. Access is granted only when the public transaction satisfies the expected network, sender authority, recipient, amount, order memo, execution and finality rules. Repeated checks return the same entitlement rather than granting access twice.
 
-The deliberate menu action **Record a question** remains a cloud transcription alternative. It locally captures one frame and records bounded temporary audio with silence detection, manual Finish and a 30-second cap. The Mac deletes its M4A after reading, Core forwards bounded multipart audio to Groq Whisper without persistence and screens uncertain/silent results. This is never activated automatically when wake recognition fails.
+Nimiq Pay remains authoritative for the complete wallet portfolio and transaction history. Truly intentionally displays only its independently validated Path payments and access activity.
 
-The menu-bar popover sizes to its content and groups current Task/status, Input, Voice-only Reply and Pause/Resume, Task/Ask actions, companion visibility, Settings and Quit. Details/resources and connection/privacy live in separate panels. Explain has a concept/why contract; Guide has a one-action/evidence-aware contract, not automatic advancement. Practice goals and the separate Check my work action appear only in Task overview, not as a Practice/Challenge question-bar control. Legacy Core `challenge` teaching requests remain compatible but cannot grant completion. API `skill` names remain compatibility details; learner-facing language follows [the domain glossary](../CONTEXT.md).
+## Learning and progress
 
-The workspace and menu popover use an explicit light appearance so neutral text remains readable under dark macOS settings. Capture excludes Truly windows by owning process as well as bundle identity. Offline pairing shows the configured Core endpoint and, for loopback development only, a Worker-start instruction. A stored desktop session can retry validation without generating another pairing code; validation still determines authority. A local Core process must remain running during development tests—it is not embedded in the Mac app. Phone host loading is a separate acceptance dependency.
+Phone handoff binds the wallet, paired Mac, learner Task, current step and any required entitlement. The desktop polls with its own credential and receives only its assigned active session.
 
-The Mini App isolates `@nimiq/mini-app-sdk` behind a wallet port and requests accounts/signatures after learner actions. A connect/switch dialog lists only host-exposed addresses for explicit selection; it never silently selects the first address, creates/imports wallets or changes the host signer. A switch commits only after server logout succeeds, then keyed remount clears every private screen and permission holder. Core verifies signatures against the selected challenge wallet and binds browser/bearer requests carrying an expected-account header to that same wallet. Ordinary browser preview is read-only; no demo wallet can create identity or signed pairing.
+Teaching and assessment are separate:
 
-Creator Studio is open to any non-suspended wallet after a purpose-specific `studio` signature. Core creates the public creator profile only after cryptographic verification; learner authority alone cannot author. Drafts are owner-private. Submission locks a saved revision. Admins come exclusively from server-owned `REVIEWER_WALLETS`, not a client field or creator status. A separate `review` signature grants short-lived review scopes; `/v1/studio/review-queue` checks those scopes and the live allowlist for every read/decision. Exact-version publication and wallet-attributed review receipts are atomic. Existing learner plans retain frozen versions/content/free-paid access. The operator-secret CLI is an isolated fallback; it is never shipped to browsers. See [Creator Studio](CREATOR-STUDIO.md).
+- `POST /v1/learning/turn` returns contextual teaching and never changes progress.
+- `POST /v1/learning/attempts` evaluates a fresh, deliberate practice capture against the pinned criteria.
 
-The connected-address control opens a narrow **Wallet & access** surface for Truly identity, paired Macs and future verified Path receipts. It does not copy Nimiq Pay's balance, top-up, withdrawal, recovery, network or general-transfer controls. Disconnecting revokes the current Mini App sign-in on Core and clears its cookie/local context; it does not revoke a paired Mac or move funds.
+The assessor returns one observation for every saved criterion. Core validates the shape and coverage of that result, requires every criterion to be met at the configured confidence threshold, then atomically stores a minimal receipt and advances the Task. An idempotency key prevents duplicate requests from incrementing progress twice.
 
-Core implements Worker/D1 pairing, hashed five-minute codes/exchange secrets, Nimiq signed-message verification, one-use claims and hashed desktop sessions. The Mac stores credentials in Keychain and validates at startup and every 15 seconds; a 401 clears credentials and the local learning context. Every future authenticated operation must check authority independently of this UI heartbeat.
+Screens, raw model observations, learner notes and transcripts are not stored as progress records. The product labels the result **AI-checked**, not certified.
 
-Device and learning control use one five-minute, purpose-bound wallet signing challenge and a fixed 15-minute opaque wallet session resumable by HttpOnly cookie. Its explicit scopes cover listing/revoking devices, reading Tasks and learning sessions, creating/editing draft Tasks and activating the selected Task/Path; it cannot move funds. `GET /v1/devices`, `GET /v1/tasks` and `GET /v1/learning/sessions` are owner-scoped. `POST /v1/tasks` creates a wallet-owned Task; activation routes check ownership and device status, while Path activation also checks published immutable version and free/owned entitlement. `GET /v1/desktop/learning-session` exposes only the session assigned to the authenticated Mac. `POST /v1/devices/:id/revoke` atomically revokes the device, all desktop sessions and outstanding approved pairing exchanges. A desktop token cannot manage wallet devices. Explicit signed re-pairing restores the same device identity and invalidates previous tokens. Cancellation requires the desktop exchange secret.
+## AI and voice boundary
 
-Phase 5A exposes `POST /v1/learning/turn` only to active desktop sessions. Core resolves the exact Task or published Path version, step and free/owned entitlement before forwarding one explicitly consented, bounded JPEG to Groq. The runtime requires a server-side Zero Data Retention confirmation, applies per-device/daily quotas and D1 concurrency leases, validates structured output and always returns `progressRecorded: false`. Desktop Ask requires the remembered processor-disclosure revision, compresses the current frame below the limit and maps a validated normalized target back to the original display. The learner can revoke locally at any time; a later disclosure revision asks again. Teaching cannot unlock a Path, operate a wallet or award completion. Separate Phase 5E assessment/progress is implemented; live-model quality and physical durable completion remain pending gates.
+Only a deliberate Ask, a completed opted-in voice question, or Check my work can send a bounded frame after the processor disclosure has been approved. Core authenticates the desktop, resolves the active Task and step, enforces size and usage limits, calls the configured model and validates structured output.
 
-Atomic D1 fixed-window counters bound requests by trusted edge IP, pairing code, installation and signature/exchange target. JSON bodies are streamed with a 16 KiB bound. Counters survive process restarts; expired buckets are cleaned in bounded batches. These controls are not a substitute for production edge abuse protection. Real Nimiq Pay signing, Xcode runtime/Keychain recovery and deployment remain manual gates.
+Hands-free recognition uses Apple Speech on-device. Ambient recognition is not streamed to Core. A completed confident question sends its text with one current frame; uncertain speech opens for review. Spoken replies use the built-in macOS synthesizer and suspend wake listening during playback.
 
-The catalog loads from Core with creator/version/multi-tag metadata, outcomes, prerequisites, supported environments, estimated time and versioned steps. The first free Nimiq curriculum can be activated on a paired Mac. Paid NIM/USDT prices remain visible, while checkout is enabled only when the active database price, verified creator payout and server configuration agree exactly. A controlled local 0.01 NIM TestAlbatross purchase has passed independent settlement validation; committed defaults and USDT remain disabled. Publishing another creator's NIM price does not expand the approved payment recipient. AI-checked progress is implemented with physical durable-completion acceptance pending. See [product vision](PRODUCT-VISION.md).
+The separate Record a question action captures bounded temporary audio for transcription. The Mac deletes the recording after reading it and Core does not persist the upload.
+
+See [AI.md](AI.md) and [PRIVACY.md](PRIVACY.md) for the complete product boundaries.
+
+## Creator publishing
+
+Creator Studio requires its own wallet-signed approval. Drafts are private to their creator. Submission locks an exact revision. Reviewer wallets are configured server-side and use a separate signed review grant; being a creator never implies review authority.
+
+Approval publishes the locked revision and records the reviewer identity atomically. Rejection returns notes without exposing the draft publicly. Existing learner Tasks continue using the version they started.
+
+## Data and storage
+
+| Data | Location | Protection |
+| --- | --- | --- |
+| Wallet keys and recovery words | Nimiq Pay | Never available to Truly |
+| Browser grant | Truly Core + HttpOnly cookie | Hashed server state, fixed expiry |
+| Desktop credential | Truly Core + macOS Keychain | Hashed server state, device-scoped |
+| Tasks, Paths and progress | D1 | Wallet-owner and scope checks |
+| Creator drafts and reviews | D1 | Creator/reviewer scope checks |
+| Payment proofs | D1 + public chain references | Immutable order and settlement invariants |
+| Current screen frame | Mac memory and bounded AI request | Deliberate capture, not persisted by Truly |
+| Voice recording | Temporary Mac file and bounded transcription request | Deleted after reading, not persisted by Core |
+
+## Technology
+
+- **Desktop:** Swift, SwiftUI, AppKit and ScreenCaptureKit
+- **Mini App:** React, TypeScript, Vite and `@nimiq/mini-app-sdk`
+- **Website:** React, TypeScript and Vite
+- **Core:** Cloudflare Workers and D1
+- **AI:** guarded vision and transcription requests through Truly Core
+
+Shared contracts and design tokens live in `packages/`. Wallet initialization and host-specific UI stay isolated inside the Mini App.
