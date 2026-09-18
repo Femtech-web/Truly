@@ -1,5 +1,6 @@
 import { init, type NimiqProvider } from '@nimiq/mini-app-sdk'
 import { isErrorResponse } from './errors'
+import { sendNimiqPayment } from './nimiq-payment'
 import type { WalletPort } from './types'
 
 class NimiqWalletAdapter implements WalletPort {
@@ -33,6 +34,10 @@ class NimiqWalletAdapter implements WalletPort {
 
   disconnect() {
     this.provider.disconnect()
+  }
+
+  async payNim(input: { recipient: string; value: number; reference: string }) {
+    return sendNimiqPayment(this.provider, input)
   }
 }
 

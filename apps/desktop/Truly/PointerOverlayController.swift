@@ -1,5 +1,4 @@
 import AppKit
-import QuartzCore
 import SwiftUI
 
 @MainActor
@@ -10,6 +9,7 @@ final class PointerOverlayController {
     private var revealTask: Task<Void, Never>?
     private var targetPoint = CGPoint.zero
     private var displayFrame = CGRect.zero
+    private var manuallyPositioned = false
 
     func showResponse(
         normalizedX: CGFloat?,
@@ -18,6 +18,7 @@ final class PointerOverlayController {
         message: String
     ) {
         revealTask?.cancel()
+        manuallyPositioned = false
         self.displayFrame = displayFrame
         targetPoint = resolvedPoint(
             normalizedX: normalizedX,
@@ -52,16 +53,23 @@ final class PointerOverlayController {
             panel.animator().alphaValue = 1
         }
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0.01 : 0.46
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            panel.animator().setFrameOrigin(destinationOrigin)
-        }
-
         revealTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-                try? await Task.sleep(for: .milliseconds(140))
+            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                panel.setFrameOrigin(destinationOrigin)
+            } else {
+                // Interruptible travel: a learner's drag always wins over automatic positioning.
+                for tick in 1...24 {
+                    guard !Task.isCancelled else { return }
+                    if self.manuallyPositioned { break }
+                    let fraction = CGFloat(tick) / 24
+                    let eased = fraction * fraction * (3 - 2 * fraction)
+                    panel.setFrameOrigin(CGPoint(
+                        x: startOrigin.x + (destinationOrigin.x - startOrigin.x) * eased,
+                        y: startOrigin.y + (destinationOrigin.y - startOrigin.y) * eased
+                    ))
+                    try? await Task.sleep(for: .milliseconds(16))
+                }
             }
             let pieces = Self.revealPieces(from: message)
             for piece in pieces {
@@ -89,9 +97,14 @@ final class PointerOverlayController {
 
     private func configureContentIfNeeded(for panel: NSPanel) {
         guard hostingView == nil else { return }
-        let root = TrulyPointerOverlay(viewModel: viewModel) { [weak self] in
-            self?.hidePointer()
-        }
+        let root = TrulyPointerOverlay(
+            viewModel: viewModel,
+            onMove: { [weak self] origin in
+                self?.manuallyPositioned = true
+                self?.overlayPanel?.setFrameOrigin(origin)
+            },
+            onClose: { [weak self] in self?.hidePointer() }
+        )
         let hostingView = NSHostingView(rootView: root)
         panel.contentView = hostingView
         self.hostingView = hostingView
@@ -119,9 +132,19 @@ final class PointerOverlayController {
     private func setPanelSize(_ size: CGSize, reposition: Bool) {
         guard let panel = overlayPanel else { return }
         var frame = panel.frame
+        let previousTop = frame.maxY
         frame.size = size
         if reposition {
-            frame.origin = validatedPanelOrigin(around: targetPoint, panelSize: size, displayFrame: displayFrame)
+            if manuallyPositioned {
+                // Keep the dragged header steady while more words grow beneath it.
+                let visible = panel.screen?.visibleFrame ?? displayFrame
+                frame.origin = CGPoint(
+                    x: min(max(frame.minX, visible.minX + 8), max(visible.minX + 8, visible.maxX - size.width - 8)),
+                    y: min(max(previousTop - size.height, visible.minY + 8), max(visible.minY + 8, visible.maxY - size.height - 8))
+                )
+            } else {
+                frame.origin = validatedPanelOrigin(around: targetPoint, panelSize: size, displayFrame: displayFrame)
+            }
         }
         panel.setFrame(frame, display: true, animate: false)
         hostingView?.frame = CGRect(origin: .zero, size: size)
@@ -211,6 +234,7 @@ private final class PointerOverlayViewModel: ObservableObject {
 
 private struct TrulyPointerOverlay: View {
     @ObservedObject var viewModel: PointerOverlayViewModel
+    let onMove: (CGPoint) -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -227,15 +251,20 @@ private struct TrulyPointerOverlay: View {
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {
-                    Text("Truly")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(TrulyTheme.tealDark)
-                    if viewModel.isWriting {
-                        Text("Writing…")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(TrulyTheme.muted)
+                    HStack(spacing: 8) {
+                        Text("Truly")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(TrulyTheme.tealDark)
+                        if viewModel.isWriting {
+                            Text("Writing…")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(TrulyTheme.muted)
+                        }
+                        Spacer(minLength: 8)
                     }
-                    Spacer(minLength: 8)
+                    .frame(maxWidth: .infinity, minHeight: 20)
+                    .overlay(ResponseDragHandle(onMove: onMove))
+                    .help("Drag to move this answer")
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .semibold))
@@ -274,6 +303,51 @@ private struct TrulyPointerOverlay: View {
         .padding(10)
         .environment(\.colorScheme, .light)
     }
+}
+
+/// Only the header handles dragging; the answer retains selection, scrolling and its close button.
+private struct ResponseDragHandle: NSViewRepresentable {
+    let onMove: (CGPoint) -> Void
+
+    func makeNSView(context: Context) -> ResponseDragView {
+        let view = ResponseDragView()
+        view.onMove = onMove
+        view.setAccessibilityElement(true)
+        view.setAccessibilityRole(.group)
+        view.setAccessibilityLabel("Truly answer")
+        view.setAccessibilityHelp("Drag this header to move the answer. Scroll or select text below.")
+        return view
+    }
+
+    func updateNSView(_ view: ResponseDragView, context: Context) { view.onMove = onMove }
+}
+
+private final class ResponseDragView: NSView {
+    var onMove: ((CGPoint) -> Void)?
+    private var startMouse = CGPoint.zero
+    private var startOrigin = CGPoint.zero
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        startMouse = NSEvent.mouseLocation
+        startOrigin = window?.frame.origin ?? .zero
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window else { return }
+        let mouse = NSEvent.mouseLocation
+        let visible = NSScreen.screens.first(where: { $0.frame.contains(mouse) })?.visibleFrame
+            ?? window.screen?.visibleFrame ?? window.frame
+        let proposed = CGPoint(x: startOrigin.x + mouse.x - startMouse.x,
+                               y: startOrigin.y + mouse.y - startMouse.y)
+        onMove?(CGPoint(
+            x: min(max(proposed.x, visible.minX + 8), max(visible.minX + 8, visible.maxX - window.frame.width - 8)),
+            y: min(max(proposed.y, visible.minY + 8), max(visible.minY + 8, visible.maxY - window.frame.height - 8))
+        ))
+    }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
 }
 
 private struct PointerShape: Shape {

@@ -15,9 +15,10 @@ interface Props {
   onConnect: () => void
   onOpenPath: (skill: Skill) => void
   onOpenTask: (task: LearningTask) => void
+  onCreatePath: () => void
 }
 
-export function LearnScreen({ view, onViewChange, skills, devices, isConnected, onConnect, onOpenPath, onOpenTask }: Props) {
+export function LearnScreen({ view, onViewChange, skills, devices, isConnected, onConnect, onOpenPath, onOpenTask, onCreatePath }: Props) {
   const [creating, setCreating] = useState(false)
   const tabId = useId()
   const tabListRef = useRef<HTMLDivElement>(null)
@@ -45,14 +46,14 @@ export function LearnScreen({ view, onViewChange, skills, devices, isConnected, 
         <div className="learn-pane__heading"><div><h2>My Tasks</h2><p>Private work connected to your wallet.</p></div><button className="new-task-button" type="button" onClick={() => isConnected ? openTaskSheet() : onConnect()}><Plus size={16} /> New Task</button></div>
 
         {!isConnected ? <div className="empty-state"><h3>Connect to keep your Tasks</h3><p>Your wallet keeps private Tasks available across Truly.</p><button className="secondary-button" type="button" onClick={onConnect}>Connect wallet</button></div>
-          : !devices.ready ? <div className="empty-state"><h3>Bring in your Tasks</h3><p>Approve read-only access to load your Tasks and paired Macs.</p><button className="secondary-button" type="button" disabled={devices.busy} onClick={() => { void devices.prepareLearning() }}>{devices.busy ? 'Waiting for approval…' : 'Load my Tasks'}</button></div>
+          : !devices.ready ? <div className="empty-state" role="status"><h3>{devices.restoring ? 'Loading your Tasks…' : 'Sign in to your Tasks'}</h3><p>{devices.restoring ? 'Picking up where you left off.' : 'Approve access to your Tasks and connected Macs. This cannot send money.'}</p>{!devices.restoring && <button className="secondary-button" type="button" disabled={devices.busy} onClick={() => { void devices.prepareLearning() }}>{devices.busy ? 'Waiting for approval…' : 'Approve access'}</button>}</div>
           : devices.tasks.length > 0 ? <div className="task-list">{devices.tasks.map((task) => <TaskCard key={task.id} task={task} active={devices.activeLearning?.source.taskId === task.id} onOpen={() => onOpenTask(task)} />)}</div>
           : <div className="empty-state"><h3>Your first Task starts here</h3><p>Choose one useful goal. Truly will make a short plan you can review.</p><button className="secondary-button" type="button" onClick={openTaskSheet}>Create a Task</button></div>}
 
         {devices.learningMessage && <p className="learning-status" role="status">{devices.learningMessage}</p>}
       </section> : <section id={`${tabId}-panel`} aria-labelledby={`${tabId}-paths`} className="learn-pane" role="tabpanel">
-        <div className="learn-pane__heading"><div><h2>Explore Paths</h2><p>Structured learning from reviewed creators.</p></div></div>
-        <div className="skill-list">{skills.map((skill) => <SkillCard key={skill.id} skill={skill} onOpen={() => onOpenPath(skill)} />)}</div>
+        <div className="learn-pane__heading"><div><h2>Explore Paths</h2><p>Learning Paths reviewed before publishing.</p></div><button className="new-task-button" type="button" onClick={onCreatePath}><Plus size={16} /> Create Path</button></div>
+        <div className="skill-list">{skills.map((skill) => <SkillCard key={skill.id} skill={skill} owned={devices.ownedPathIds.includes(skill.id)} onOpen={() => onOpenPath(skill)} />)}</div>
       </section>}
 
       <TaskCreateSheet open={creating} busy={devices.busy} requestMessage={devices.learningMessage} onClose={() => setCreating(false)} onCreate={devices.createTask} onCreated={(task) => { setCreating(false); onOpenTask(task) }} />

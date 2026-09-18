@@ -14,23 +14,39 @@ import { ProgressScreen } from './screens/ProgressScreen'
 import { SkillDetailScreen } from './screens/SkillDetailScreen'
 import { TaskDetailScreen } from './screens/TaskDetailScreen'
 import { WalletScreen } from './screens/WalletScreen'
+import { CreatorStudioScreen } from './screens/CreatorStudioScreen'
+import { CreatorProfileScreen } from './screens/CreatorProfileScreen'
+import { ReviewQueueScreen } from './screens/ReviewQueueScreen'
+import { WalletConnectSheet } from './components/WalletConnectSheet'
 import type { AppTab, LearnView, LearningTask, Skill } from './types'
+import { readNavigation, saveNavigation } from './core/navigation'
 
 export function App() {
   const wallet = useWallet()
+  const [walletSheetOpen, setWalletSheetOpen] = useState(false)
+  // An identity change unmounts every private-data/permission holder immediately.
+  return <><WalletApp key={wallet.account ?? 'disconnected'} wallet={wallet} onConnect={() => setWalletSheetOpen(true)} />
+    <WalletConnectSheet open={walletSheetOpen} account={wallet.account} onClose={() => setWalletSheetOpen(false)} onDiscover={wallet.connect} onSelect={wallet.selectAccount} /></>
+}
+
+function WalletApp({ wallet, onConnect }: { wallet: ReturnType<typeof useWallet>; onConnect: () => void }) {
   const pairing = usePairing({ account: wallet.account, walletKind: wallet.kind, signMessage: wallet.signMessage })
   const devices = useDevices(wallet.account, wallet.signMessage)
   const catalog = useCatalog()
-  const [hasEntered, setHasEntered] = useState(false)
-  const [tab, setTab] = useState<AppTab>('home')
-  const [learnView, setLearnView] = useState<LearnView>('tasks')
+  const [navigation] = useState(readNavigation)
+  const [hasEntered, setHasEntered] = useState(navigation.entered)
+  const [tab, setTab] = useState<AppTab>(navigation.tab)
+  const [learnView, setLearnView] = useState<LearnView>(navigation.learnView)
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null)
   const [selectedTask, setSelectedTask] = useState<LearningTask | null>(null)
+  const [studioOpen, setStudioOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [creatorSlug, setCreatorSlug] = useState<string | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     contentRef.current?.scrollTo({ top: 0 })
-  }, [hasEntered, tab, learnView, selectedSkill?.id, selectedTask?.id])
+  }, [hasEntered, tab, learnView, selectedSkill?.id, selectedTask?.id, studioOpen, reviewOpen, creatorSlug])
 
   useEffect(() => {
     document.documentElement.lang = getHostLanguage() || navigator.language || 'en'
@@ -39,6 +55,7 @@ export function App() {
   useEffect(() => {
     if (wallet.status === 'connected') setHasEntered(true)
   }, [wallet.status])
+  useEffect(() => { saveNavigation({ entered: hasEntered, tab, learnView }) }, [hasEntered, tab, learnView])
 
   const walletState = useMemo(() => ({
     status: wallet.status,
@@ -49,12 +66,16 @@ export function App() {
   }), [wallet.account, wallet.consensus, wallet.kind, wallet.message, wallet.status])
 
   const showTab = (nextTab: AppTab) => {
+    setStudioOpen(false)
+    setReviewOpen(false)
+    setCreatorSlug(null)
     setSelectedSkill(null)
     setSelectedTask(null)
     setTab(nextTab)
   }
 
   const openSkill = (skill: Skill) => {
+    setCreatorSlug(null)
     setSelectedTask(null)
     setSelectedSkill(skill)
   }
@@ -85,8 +106,10 @@ export function App() {
     else showLearn('tasks')
   }
 
-  const disconnectWallet = () => {
-    wallet.disconnect()
+  const disconnectWallet = async () => {
+    if (!await wallet.disconnect()) return
+    setStudioOpen(false)
+    setCreatorSlug(null)
     setSelectedSkill(null)
     setSelectedTask(null)
     setTab('home')
@@ -94,24 +117,27 @@ export function App() {
   }
 
   if (!hasEntered) {
-    return <div className="miniapp-shell miniapp-shell--onboarding"><OnboardingScreen wallet={walletState} onConnect={wallet.connect} onBrowse={() => setHasEntered(true)} /></div>
+    return <div className="miniapp-shell miniapp-shell--onboarding"><OnboardingScreen wallet={walletState} onConnect={onConnect} onBrowse={() => setHasEntered(true)} /></div>
   }
 
   return (
     <div className="miniapp-shell">
-      <AppHeader wallet={walletState} onConnect={wallet.connect} onShowWallet={() => showTab('wallet')} />
+      <AppHeader wallet={walletState} onConnect={onConnect} onShowWallet={() => showTab('wallet')} />
       <div className="app-content" ref={contentRef}>
         {(tab === 'home' || tab === 'learn') && catalog.status !== 'ready' && <div className="inline-note inline-note--neutral" role="status"><p>{catalog.status === 'loading' ? 'Loading Paths…' : catalog.message}</p>{catalog.status === 'failed' && <button className="text-button" type="button" onClick={catalog.reload}>Retry</button>}</div>}
 
-        {selectedTask ? <TaskDetailScreen task={selectedTask} devices={devices} onBack={() => setSelectedTask(null)} onShowDevices={() => showTab('devices')} />
-          : selectedSkill ? <SkillDetailScreen skill={selectedSkill} devices={devices} account={wallet.account} walletKind={wallet.kind} onBack={() => setSelectedSkill(null)} onConnect={wallet.connect} onShowDevices={() => showTab('devices')} />
-            : tab === 'home' ? <HomeScreen skills={catalog.skills} activeLearning={devices.activeLearning} onOpenSkill={openSkill} onResumeActive={resumeActive} onShowTasks={() => showLearn('tasks')} onShowPaths={() => showLearn('paths')} onShowDevices={() => showTab('devices')} />
-              : tab === 'learn' ? <LearnScreen view={learnView} onViewChange={setLearnView} skills={catalog.skills} devices={devices} isConnected={wallet.status === 'connected'} onConnect={wallet.connect} onOpenPath={openSkill} onOpenTask={openTask} />
-                : tab === 'devices' ? <DevicesScreen pairing={pairing} devices={devices} account={wallet.account} walletKind={wallet.kind} onConnect={wallet.connect} />
-                  : tab === 'progress' ? <ProgressScreen />
-                    : wallet.account ? <WalletScreen account={wallet.account} onBack={() => showTab('home')} onShowDevices={() => showTab('devices')} onDisconnect={disconnectWallet} /> : null}
+        {reviewOpen && wallet.account ? <ReviewQueueScreen account={wallet.account} signMessage={wallet.signMessage} onBack={() => setReviewOpen(false)} onPublishedChange={catalog.reload} />
+          : studioOpen && wallet.account ? <CreatorStudioScreen key={wallet.account} account={wallet.account} signMessage={wallet.signMessage} onBack={() => setStudioOpen(false)} onPublishedChange={catalog.reload} onOpenReviews={() => setReviewOpen(true)} />
+          : creatorSlug ? <CreatorProfileScreen slug={creatorSlug} skills={catalog.skills} ownedPathIds={devices.ownedPathIds} onBack={() => setCreatorSlug(null)} onOpenPath={openSkill} />
+          : selectedTask ? <TaskDetailScreen task={selectedTask} devices={devices} onBack={() => setSelectedTask(null)} onShowDevices={() => showTab('devices')} />
+          : selectedSkill ? <SkillDetailScreen skill={selectedSkill} devices={devices} account={wallet.account} walletKind={wallet.kind} payNim={wallet.payNim} onBack={() => setSelectedSkill(null)} onConnect={onConnect} onShowDevices={() => showTab('devices')} onOpenCreator={() => setCreatorSlug(selectedSkill.creator.slug)} />
+            : tab === 'home' ? <HomeScreen skills={catalog.skills} ownedPathIds={devices.ownedPathIds} activeLearning={devices.activeLearning} onOpenSkill={openSkill} onResumeActive={resumeActive} onShowTasks={() => showLearn('tasks')} onShowPaths={() => showLearn('paths')} onShowDevices={() => showTab('devices')} />
+              : tab === 'learn' ? <LearnScreen view={learnView} onViewChange={setLearnView} skills={catalog.skills} devices={devices} isConnected={wallet.status === 'connected'} onConnect={onConnect} onOpenPath={openSkill} onOpenTask={openTask} onCreatePath={() => wallet.account ? setStudioOpen(true) : onConnect()} />
+                : tab === 'devices' ? <DevicesScreen pairing={pairing} devices={devices} account={wallet.account} walletKind={wallet.kind} onConnect={onConnect} />
+                  : tab === 'progress' ? <ProgressScreen devices={devices} connected={wallet.status === 'connected'} onConnect={onConnect} />
+                    : wallet.account ? <WalletScreen account={wallet.account} message={wallet.message} accessReady={devices.ready} loadWalletActivity={devices.loadWalletActivity} onBack={() => showTab('home')} onShowDevices={() => showTab('devices')} onDisconnect={disconnectWallet} onOpenStudio={() => setStudioOpen(true)} onSwitchAccount={onConnect} /> : <HomeScreen skills={catalog.skills} ownedPathIds={devices.ownedPathIds} activeLearning={null} onOpenSkill={openSkill} onResumeActive={resumeActive} onShowTasks={() => showLearn('tasks')} onShowPaths={() => showLearn('paths')} onShowDevices={() => showTab('devices')} />}
       </div>
-      {!selectedSkill && !selectedTask && tab !== 'wallet' && <BottomNav active={tab} onChange={showTab} />}
+      {!studioOpen && !reviewOpen && !creatorSlug && !selectedSkill && !selectedTask && tab !== 'wallet' && <BottomNav active={tab} onChange={showTab} />}
     </div>
   )
 }

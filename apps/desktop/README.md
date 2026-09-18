@@ -6,9 +6,15 @@ Drag to position it beside your work. Click without dragging to capture that dis
 
 The menu holds quick input/reply and visibility controls. Pairing and privacy live in separate Settings panels. Keychain sessions are validated at startup and every 15 seconds; Core revocation invalidates authority immediately, independently of that UI check.
 
+Move a teaching answer by dragging its **Truly** header, even while words are appearing. The header stays where you place it as the card grows; long answers remain scrollable and selectable. Close the card with its separate close button. Moving a card never captures another screen or changes the active Task.
+
+Text and Voice both use the active Task's title, outcome and current step plus the requested visible frame. Cursor position selects a display and approximate focus, not a new Task. Keep relevant work visible: Truly cannot see hidden tabs, unopened resources or a live view of other pages, and model understanding remains fallible.
+
 Choose a free executable Skill in the Nimiq Pay Mini App, press **Start on my Mac**, and select this paired Mac. Core creates or resumes the authoritative session. The desktop discovers it with the Keychain credential, announces the exact Skill and step, and uses that context for Ask; it does not guess from the screenshot. Groq approval is explicit once for the current disclosure revision, remembered locally and revocable from the workspace or menu bar. Capture alone remains local.
 
 ## Run in Xcode
+
+Practice lives in **Open Task → Overview → Check my work**, not the Explain/Guide question bar. The action shares one fresh screen with Groq, applies the saved criteria and displays either a correction/insufficient evidence or saved AI-checked progress. Enable AI help first. New private Tasks and reviewed Paths carry criteria; older Tasks without them remain teaching-only. An AI check is not certification. Refresh after a network error before trying again; no offline screenshot queue is retained.
 
 1. Open `Truly.xcodeproj`, select **Truly → My Mac**, then press Command–R.
 2. If signing needs setup: click the top blue project item, choose **TARGETS → Truly → Signing & Capabilities → Team**. The existing team configuration is preserved.

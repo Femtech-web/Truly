@@ -19,3 +19,13 @@ test('creates a valid key when the Nimiq Pay WebView has no randomUUID', () => {
 test('uses native randomUUID when the host provides it', () => {
   assert.equal(createIdempotencyKey({ randomUUID: () => 'native-key' }), 'native-key')
 })
+
+test('still creates a non-secret request key in older WebViews without a crypto object', () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto')
+  Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true })
+  try { assert.match(createIdempotencyKey(), /^[A-Za-z0-9_-]{16,100}$/) }
+  finally {
+    if (original) Object.defineProperty(globalThis, 'crypto', original)
+    else Reflect.deleteProperty(globalThis, 'crypto')
+  }
+})

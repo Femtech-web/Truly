@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getWalletError, wasRejected } from '../wallet/errors'
 import { createNimiqWallet } from '../wallet/nimiqWallet'
 import type { WalletPort, WalletState } from '../wallet/types'
+import { endBrowserSession, resumeBrowserSession } from '../core/browser-session'
+import { availableAccounts, changeAccount } from '../wallet/accounts'
 
 const initialState: WalletState = {
   status: 'initializing',
@@ -15,29 +17,25 @@ export function useWallet() {
   const [state, setState] = useState(initialState)
   const walletRef = useRef<WalletPort | null>(null)
   const approvalOpen = useRef(false)
-
-  const prepare = useCallback(async (wallet: WalletPort) => {
-    walletRef.current = wallet
-    const consensus = await wallet.isConsensusEstablished()
-    setState({
-      status: 'ready',
-      kind: wallet.kind,
-      account: null,
-      consensus,
-      message: consensus ? null : 'Nimiq is still syncing. You can browse while it gets ready.',
-    })
-  }, [])
+  const operationRef = useRef(0)
+  const discovered = useRef<string[]>([])
 
   useEffect(() => {
     let isCurrent = true
-
-    createNimiqWallet()
-      .then(async (wallet) => {
-        if (!isCurrent) return
-        await prepare(wallet)
+    const operation = ++operationRef.current
+    Promise.all([createNimiqWallet(), resumeBrowserSession().catch(() => null)])
+      .then(async ([wallet, session]) => {
+        const consensus = await wallet.isConsensusEstablished()
+        // SDK init can share a provider across StrictMode effects. Never disconnect
+        // a stale initializer, or let it overwrite a newer explicit connection.
+        if (!isCurrent || operation !== operationRef.current) return
+        walletRef.current = wallet
+        setState({ status: session ? 'connected' : 'ready', kind: wallet.kind,
+          account: session?.account ?? null, consensus,
+          message: consensus ? null : 'Nimiq is still syncing. You can browse while it gets ready.' })
       })
       .catch(() => {
-        if (!isCurrent) return
+        if (!isCurrent || operation !== operationRef.current) return
         setState({
           status: 'unavailable',
           kind: null,
@@ -50,13 +48,12 @@ export function useWallet() {
     return () => {
       isCurrent = false
     }
-  }, [prepare])
+  }, [])
 
-  const connect = useCallback(async () => {
-    if (approvalOpen.current) return
+  const connect = useCallback(async (): Promise<string[]> => {
+    if (approvalOpen.current) throw new Error('Finish the open wallet approval before switching accounts.')
     approvalOpen.current = true
-
-    setState((current) => ({ ...current, status: 'connecting', message: null }))
+    operationRef.current += 1
 
     try {
       let wallet = walletRef.current
@@ -64,31 +61,42 @@ export function useWallet() {
         wallet = await createNimiqWallet()
         walletRef.current = wallet
       }
-      const accounts = await wallet.listAccounts()
-      const account = accounts[0]
-
-      if (!account) {
-        throw new Error('No wallet was selected.')
-      }
-
-      setState((current) => ({ ...current, status: 'connected', account, message: null }))
+      const accounts = availableAccounts(await wallet.listAccounts())
+      if (!accounts.length) throw new Error('No accounts were shared. Create or import your wallet inside Nimiq Pay, then refresh accounts here.')
+      discovered.current = accounts
+      return accounts
     } catch (error) {
-      setState((current) => ({
-        ...current,
-        status: wasRejected(error) ? 'rejected' : 'failed',
-        account: null,
-        message: wasRejected(error)
-          ? 'Connection cancelled. Your wallet was not changed.'
-          : getWalletError(error),
-      }))
+      throw new Error(wasRejected(error) ? 'Connection cancelled. Your wallet was not changed.' : getWalletError(error))
     } finally {
       approvalOpen.current = false
     }
   }, [])
 
-  const disconnect = useCallback(() => {
+  const selectAccount = useCallback(async (selected: string) => {
+    if (approvalOpen.current) throw new Error('Finish the open wallet approval before switching accounts.')
+    approvalOpen.current = true
+    try {
+      await changeAccount({ selected, available: discovered.current, current: state.account, endSession: endBrowserSession,
+        commit: account => {
+          operationRef.current += 1
+          setState(current => ({ ...current, kind: 'nimiq', status: 'connected', account, message: null }))
+        } })
+    } finally { approvalOpen.current = false }
+  }, [state.account])
+
+  const disconnect = useCallback(async (): Promise<boolean> => {
+    if (approvalOpen.current) return false
+    approvalOpen.current = true
+    try { await endBrowserSession() }
+    catch {
+      setState(current => ({ ...current, message: 'Could not disconnect securely. Check your connection and try again.' }))
+      approvalOpen.current = false
+      return false
+    }
     walletRef.current?.disconnect()
+    operationRef.current += 1
     walletRef.current = null
+    discovered.current = []
     approvalOpen.current = false
     setState({
       status: 'ready',
@@ -97,6 +105,7 @@ export function useWallet() {
       consensus: null,
       message: 'Disconnected from Truly. Your wallet and paired Macs were not changed.',
     })
+    return true
   }, [])
 
   const signMessage = useCallback(async (message: string) => {
@@ -114,7 +123,16 @@ export function useWallet() {
   return {
     ...state,
     connect,
+    selectAccount,
     disconnect,
     signMessage,
+    payNim: async (input: { recipient: string; value: number; reference: string }) => {
+      const wallet = walletRef.current
+      if (!wallet || state.status !== 'connected' || !state.account) throw new Error('Connect Nimiq Pay before paying.')
+      if (approvalOpen.current) throw new Error('Finish the open wallet approval first.')
+      approvalOpen.current = true
+      try { return await wallet.payNim(input) }
+      finally { approvalOpen.current = false }
+    },
   }
 }

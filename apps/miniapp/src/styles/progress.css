@@ -1,0 +1,5 @@
+.progress-list { display: grid; gap: 16px; }
+.progress-entry > div { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.progress-entry > div span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.progress-entry progress { width: 100%; height: 6px; accent-color: var(--teal); }
+.progress-entry small { display: block; margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }

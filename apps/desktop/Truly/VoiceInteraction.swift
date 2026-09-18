@@ -8,9 +8,11 @@ enum TrulyInputMode: String, CaseIterable, Identifiable {
 
 /// Pure, testable phrase boundary. A wake phrase is not speaker authentication.
 enum TrulyWakePhrase {
+    static func range(in transcript: String) -> Range<String.Index>? {
+        transcript.range(of: #"\bhey[\s,]+truly\b[\s,.!?:;-]*"#, options: [.regularExpression, .caseInsensitive])
+    }
     static func question(in transcript: String) -> String? {
-        let pattern = #"\bhey[\s,]+truly\b[\s,.!?:;-]*"#
-        guard let range = transcript.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
+        guard let range = range(in: transcript) else { return nil }
         return String(transcript[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -20,6 +22,25 @@ enum TrulyWakePhrase {
         if question.range(of: #"^(please\s+)?explain\b"#,
                           options: [.regularExpression, .caseInsensitive]) != nil { return .explain }
         return nil
+    }
+}
+
+enum TrulyVoiceRecognitionPolicy {
+    /// Unknown/partial confidence is never permission to send a frame automatically.
+    static func requiresReview(isFinal: Bool, wakeConfidences: [Float], questionConfidences: [Float]) -> Bool {
+        !isFinal || wakeConfidences.isEmpty || questionConfidences.isEmpty
+            || (wakeConfidences + questionConfidences).contains { !$0.isFinite || $0 < 0.5 || $0 > 1 }
+    }
+
+    /// A recognizer can retract a partial wake phrase. Never submit its stale suffix.
+    static func discardsCorrectedWake(question: String?, isFinal: Bool) -> Bool {
+        isFinal && question == nil
+    }
+}
+
+enum TrulySpeechPlaybackPolicy {
+    static func acceptsCallback(active: ObjectIdentifier?, callback: ObjectIdentifier) -> Bool {
+        active == callback
     }
 }
 

@@ -73,7 +73,8 @@ export function withCors(request: Request, env: Env, response: Response): Respon
   const next = new Response(response.body, response)
   next.headers.set('access-control-allow-origin', origin)
   next.headers.set('access-control-allow-methods', 'GET, POST, OPTIONS')
-  next.headers.set('access-control-allow-headers', 'content-type, authorization, idempotency-key, x-truly-consent-revision')
+  next.headers.set('access-control-allow-headers', 'content-type, authorization, idempotency-key, x-truly-consent-revision, x-truly-browser, x-truly-account')
+  next.headers.set('access-control-allow-credentials', 'true')
   next.headers.set('access-control-max-age', '86400')
   next.headers.set('vary', 'Origin')
   return next

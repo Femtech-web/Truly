@@ -1,14 +1,4 @@
 @media (max-width: 980px) {
-  .workspace { grid-template-columns: 1fr; }
-
-  .assistant-panel {
-    min-height: 440px;
-    border-top: 1px solid var(--border-soft);
-    border-left: 0;
-  }
-
-  .assistant-answer p { min-height: auto; }
-
   .session-section,
   .privacy-section,
   .faq-section {
@@ -62,17 +52,6 @@
   .hero-note { flex-wrap: wrap; line-height: 1.7; }
 
   .product-showcase { width: 100%; padding-bottom: 84px; }
-  .showcase-canvas { padding: 14px; border-right: 0; border-left: 0; border-radius: 0; }
-  .window-bar { grid-template-columns: 1fr auto; }
-  .window-title { display: none; }
-  .editor-header { width: 158px; }
-  .code { padding: 54px 14px; font-size: 0.69rem; }
-  .code > div { grid-template-columns: 26px 1fr; min-height: 35px; padding-inline: 4px; }
-  .screen-pointer--explain { transform: translate(205px, 125px); }
-  .screen-pointer--guide { transform: translate(225px, 195px); }
-  .screen-pointer--challenge { transform: translate(125px, 195px); }
-  .assistant-panel { min-height: 420px; padding: 22px; }
-  .assistant-context { max-width: 150px; }
 
   .session-section { gap: 48px; padding-block: 82px 94px; }
   .session-copy h2,
@@ -116,7 +95,5 @@
 
 @media (max-width: 390px) {
   .hero h1 { font-size: 2.65rem; }
-  .assistant-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
-  .mode-button { padding-inline: 4px; font-size: 0.67rem; }
   .device-card { right: -3px; }
 }

@@ -15,6 +15,7 @@ enum VoiceInputState: Equatable {
 final class VoiceRecorder {
     private var recorder: AVAudioRecorder?
     private var recordingURL: URL?
+    private let files = FileManager()
 
     func start(whileRequested: () -> Bool) async throws {
         let allowed: Bool
@@ -26,7 +27,7 @@ final class VoiceRecorder {
         guard allowed else { throw VoiceError.permissionDenied }
         try Task.checkCancellation()
         guard whileRequested() else { throw CancellationError() }
-        let url = FileManager.default.temporaryDirectory.appending(path: "truly-voice-\(UUID().uuidString).m4a")
+        let url = files.temporaryDirectory.appending(path: "truly-voice-\(UUID().uuidString).m4a")
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
             AVSampleRateKey: 16_000,
@@ -49,7 +50,7 @@ final class VoiceRecorder {
         recorder = nil
         guard let url = recordingURL else { throw VoiceError.recordingFailed }
         recordingURL = nil
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { try? files.removeItem(at: url) }
         guard duration >= 0.35 else { throw VoiceError.tooShort }
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
         guard data.count >= 32, data.count <= 5 * 1024 * 1024 else { throw VoiceError.recordingFailed }
@@ -59,7 +60,7 @@ final class VoiceRecorder {
     func cancel() {
         recorder?.stop()
         recorder = nil
-        if let recordingURL { try? FileManager.default.removeItem(at: recordingURL) }
+        if let recordingURL { try? files.removeItem(at: recordingURL) }
         recordingURL = nil
     }
 
@@ -126,20 +127,30 @@ struct VoiceTranscriptionService {
 @MainActor
 final class SpeechPlaybackService: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
+    private var activeUtterance: AVSpeechUtterance?
     var onPlayingChanged: ((Bool) -> Void)?
     override init() { super.init(); synthesizer.delegate = self }
     func speak(_ text: String) {
         synthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
+        activeUtterance = utterance
         utterance.rate = 0.48
         onPlayingChanged?(true)
         synthesizer.speak(utterance)
     }
-    func stop() { synthesizer.stopSpeaking(at: .immediate); onPlayingChanged?(false) }
+    func stop() { activeUtterance = nil; synthesizer.stopSpeaking(at: .immediate); onPlayingChanged?(false) }
+    private func finished(_ utterance: AVSpeechUtterance) {
+        // A delayed cancellation for an old reply must not reopen the microphone
+        // while a newer reply is being spoken. isSpeaking can be transient here.
+        guard TrulySpeechPlaybackPolicy.acceptsCallback(active: activeUtterance.map(ObjectIdentifier.init),
+                                                       callback: ObjectIdentifier(utterance)) else { return }
+        activeUtterance = nil
+        onPlayingChanged?(false)
+    }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor [weak self] in self?.onPlayingChanged?(self?.synthesizer.isSpeaking ?? false) }
+        Task { @MainActor [weak self] in self?.finished(utterance) }
     }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor [weak self] in self?.onPlayingChanged?(self?.synthesizer.isSpeaking ?? false) }
+        Task { @MainActor [weak self] in self?.finished(utterance) }
     }
 }

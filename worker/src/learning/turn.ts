@@ -7,12 +7,12 @@ import { askGroq, getGroqConfiguration } from './groq'
 import { MAX_AI_REQUEST_BYTES, parseLearningTurn } from './protocol'
 import { loadSessionByIdentity } from './sessions'
 
-function dailyLimit(env: Env): number {
+export function dailyLimit(env: Env): number {
   const configured = Number.parseInt(env.AI_DAILY_LIMIT ?? '100', 10)
   return Number.isSafeInteger(configured) && configured >= 1 && configured <= 1_000 ? configured : 100
 }
 
-async function acquireLease(env: Env, deviceId: string): Promise<string> {
+export async function acquireLease(env: Env, deviceId: string): Promise<string> {
   const now = Date.now()
   await env.DB.prepare('DELETE FROM ai_request_leases WHERE expires_at <= ?').bind(now).run()
   const id = crypto.randomUUID()

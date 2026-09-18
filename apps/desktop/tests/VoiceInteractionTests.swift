@@ -35,6 +35,19 @@ struct VoiceInteractionTests {
             TrulyVoiceEligibility(mode: .voice, paused: false, visible: true, paired: true, hasTask: true, processorApproved: true, wakeApproved: false),
         ]
         for policy in forbidden { precondition(!policy.canListen) }
-        print("22 voice/input boundary checks passed")
+        precondition(!TrulyVoiceRecognitionPolicy.requiresReview(isFinal: true, wakeConfidences: [0.9, 0.9], questionConfidences: [0.9]))
+        precondition(TrulyVoiceRecognitionPolicy.requiresReview(isFinal: false, wakeConfidences: [0.9, 0.9], questionConfidences: [0.9]))
+        precondition(TrulyVoiceRecognitionPolicy.requiresReview(isFinal: true, wakeConfidences: [0.2, 0.9], questionConfidences: [0.9]))
+        precondition(TrulyVoiceRecognitionPolicy.requiresReview(isFinal: true, wakeConfidences: [], questionConfidences: [0.9]))
+        precondition(TrulyVoiceRecognitionPolicy.requiresReview(isFinal: true, wakeConfidences: [0.9, 0.9], questionConfidences: [0]))
+        precondition(TrulyVoiceRecognitionPolicy.requiresReview(isFinal: true, wakeConfidences: [0.9, 0.9], questionConfidences: []))
+        precondition(TrulyVoiceRecognitionPolicy.discardsCorrectedWake(question: nil, isFinal: true))
+        precondition(!TrulyVoiceRecognitionPolicy.discardsCorrectedWake(question: nil, isFinal: false))
+        precondition(!TrulyVoiceRecognitionPolicy.discardsCorrectedWake(question: "explain", isFinal: true))
+        let first = NSObject(), second = NSObject()
+        precondition(TrulySpeechPlaybackPolicy.acceptsCallback(active: ObjectIdentifier(first), callback: ObjectIdentifier(first)))
+        precondition(!TrulySpeechPlaybackPolicy.acceptsCallback(active: ObjectIdentifier(second), callback: ObjectIdentifier(first)))
+        precondition(!TrulySpeechPlaybackPolicy.acceptsCallback(active: nil, callback: ObjectIdentifier(first)))
+        print("34 voice/input boundary checks passed")
     }
 }

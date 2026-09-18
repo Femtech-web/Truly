@@ -62,7 +62,11 @@ describe('learning protocol', () => {
     const user = sent?.messages[1]?.content
     expect(Array.isArray(user)).toBe(true)
     if (!Array.isArray(user)) throw new Error('missing user content')
-    expect(JSON.parse(user[0]?.text ?? '{}')).toMatchObject({ mode, focus: { x: 0.3, y: 0.7 } })
+    expect(JSON.parse(user[0]?.text ?? '{}')).toMatchObject({
+      mode, focus: { x: 0.3, y: 0.7 }, learnerQuestion: validTurn.question,
+      learningContext: { title: context.title, summary: context.summary, outcomes: context.outcomes },
+      step, supportedEnvironments: context.supportedEnvironments,
+    })
     expect(answer).not.toHaveProperty('completed')
   })
 

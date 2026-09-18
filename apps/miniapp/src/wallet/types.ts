@@ -5,6 +5,7 @@ export interface WalletPort {
   isConsensusEstablished(): Promise<boolean>
   listAccounts(): Promise<string[]>
   sign(message: string): Promise<{ publicKey: string; signature: string }>
+  payNim(input: { recipient: string; value: number; reference: string }): Promise<string>
   disconnect(): void
 }
 

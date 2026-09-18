@@ -1,45 +1,8 @@
-export type LearningMode = 'explain' | 'guide' | 'challenge'
-
-export interface LearningModeContent {
-  label: string
-  context: string
-  response: string
-  action: string
-  activeLine: number
-}
-
-export const modeContent: Record<LearningMode, LearningModeContent> = {
-  explain: {
-    label: 'Explain',
-    context: 'Understanding the screen',
-    response:
-      'This effect runs after the component appears. Because the dependency list is empty, React has no reason to run it again.',
-    action: 'Show me why',
-    activeLine: 2,
-  },
-  guide: {
-    label: 'Guide',
-    context: 'Working one step at a time',
-    response:
-      'Add users to the dependency list on line 4. I’ll wait for your change, then we can check what happened.',
-    action: 'Check my change',
-    activeLine: 4,
-  },
-  challenge: {
-    label: 'Challenge',
-    context: 'Practising without the answer',
-    response:
-      'Make this effect run whenever the users list changes. You can ask for a small hint if you get stuck.',
-    action: 'Give me a hint',
-    activeLine: 4,
-  },
-}
-
 export const frequentlyAskedQuestions = [
   {
     question: 'What can I learn with Truly?',
     answer:
-      'Truly is designed for visible, practical work: code, creative tools, technical workflows, and other skills where seeing the current screen makes the explanation more useful. The first complete Skill teaches React Effects.',
+      'Truly is designed for visible, practical work: code, creative tools, technical workflows, and other subjects where seeing the current screen makes an explanation more useful. Start from your own private goal or follow a reviewed creator Path.',
   },
   {
     question: 'Does Truly watch my screen in the background?',
@@ -54,12 +17,12 @@ export const frequentlyAskedQuestions = [
   {
     question: 'Why does Truly connect to Nimiq Pay?',
     answer:
-      'Nimiq Pay gives Truly a user-controlled identity and payment layer. It lets you approve a Mac, unlock creator-made Skills with NIM, and keep progress connected without giving Truly access to wallet keys.',
+      'Nimiq Pay gives Truly a user-controlled identity and payment layer. It lets you approve a Mac, unlock creator-made Paths with NIM, and keep progress connected without giving Truly access to wallet keys.',
   },
   {
     question: 'Do I need to pay to start learning?',
     answer:
-      'No. The competition experience includes a free React Effects Skill. Some creator-made Skills may be unlocked with NIM later, with the exact amount shown before Nimiq Pay asks for approval.',
+      'No. You can create a private Task or start a free Path. Creators can also price a reviewed Path in NIM; Truly shows the exact amount, network, seller and recipient before Nimiq Pay asks for approval. The current competition build uses testnet NIM with no real-world value.',
   },
   {
     question: 'When will the macOS app be available?',

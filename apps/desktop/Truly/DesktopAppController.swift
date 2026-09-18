@@ -79,9 +79,10 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
             cancelVoiceInteraction()
             voice.stop()
             self.learning.activateLearningSession(session)
-            if companionVisible, let session, change == .updated {
+            if let session, session.status == "active", change == .updated, !learning.phase.isBusy {
                 self.companion.showLearningReady(
                     title: session.source.title,
+                    companionVisible: companionVisible,
                     workspaceLink: session.preferredWorkspaceLink,
                     onOpen: { [weak self] link in self?.openExternalLink(link) }
                 )
@@ -156,12 +157,12 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
 
     private func reconcileVoice() {
         let eligibility = TrulyVoiceEligibility(mode: inputMode, paused: voicePaused, visible: companionVisible,
-            paired: pairing.state == .paired, hasTask: learning.activeLearningSession != nil,
+            paired: pairing.state == .paired, hasTask: learning.activeLearningSession?.status == "active",
             processorApproved: learning.processorConsentGranted,
             wakeApproved: UserDefaults.standard.bool(forKey: Self.wakeConsentKey))
         guard eligibility.canListen else {
             if voice.state != .paused { voice.stop() }
-            if !learning.processorConsentGranted || pairing.state != .paired || learning.activeLearningSession == nil {
+            if !learning.processorConsentGranted || pairing.state != .paired || learning.activeLearningSession?.status != "active" {
                 cancelVoiceInteraction()
             }
             return
@@ -189,7 +190,7 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
 
     private func askByVoice(_ text: String, requiresReview: Bool) {
         guard inputMode == .voice, !voicePaused, companionVisible, pairing.state == .paired,
-              learning.processorConsentGranted, let session = learning.activeLearningSession else { voice.stop(); return }
+              learning.processorConsentGranted, let session = learning.activeLearningSession, session.status == "active" else { voice.stop(); return }
         let interaction = voiceInteraction
         let point = voiceFocus
         voiceQuestionInFlight = true
@@ -233,13 +234,13 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
 
     var voiceAvailability: String {
         if pairing.state != .paired { return "Connect this Mac in Settings to use voice." }
-        if learning.activeLearningSession == nil { return "Start a Task from your phone to use voice." }
+        if learning.activeLearningSession?.status != "active" { return "Start a Task from your phone to use voice." }
         if !learning.processorConsentGranted { return "Allow AI help in Settings → Privacy to use voice." }
         return voice.state.label
     }
 
     var canRecordQuestion: Bool {
-        companionVisible && pairing.state == .paired && learning.activeLearningSession != nil && learning.processorConsentGranted &&
+        companionVisible && pairing.state == .paired && learning.activeLearningSession?.status == "active" && learning.processorConsentGranted &&
             !learning.phase.isBusy && !learning.voiceState.isBusy && !capturing && !voiceQuestionInFlight
     }
 
@@ -296,12 +297,35 @@ final class DesktopAppController: NSObject, ObservableObject, NSWindowDelegate {
             window.title = "Current Task"
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: TrulyTaskPanelView(controller: self)
+                .environmentObject(learning)
                 .environmentObject(pairing))
             window.center()
             taskPanel = window
         }
         NSApp.activate(ignoringOtherApps: true)
         taskPanel?.makeKeyAndOrderFront(nil)
+    }
+
+    func checkPractice() {
+        guard learning.canCheckPractice, !capturing, pairing.state == .paired else { return }
+        voicePaused = true
+        cancelVoiceInteraction()
+        voice.stop()
+        pointer.hidePointer()
+        taskPanel?.orderOut(nil)
+        workspace?.orderOut(nil)
+        capturing = true
+        let expected = learning.activeLearningSession
+        let interaction = voiceInteraction
+        let point = NSEvent.mouseLocation
+        voiceLaunchTask = Task {
+            await learning.shareContext(at: point, appName: "Your practice work")
+            capturing = false
+            guard !Task.isCancelled, interaction == voiceInteraction, companionVisible, pairing.state == .paired,
+                  learning.activeLearningSession == expected else { return }
+            guard learning.capturedScreen != nil else { openTaskPanel(); return }
+            learning.checkPractice()
+        }
     }
 
     func openSettings() {

@@ -9,7 +9,8 @@ interface RuntimeRow {
   summary: string
   creator_name: string
   manifest_json: string
-  price_count: number
+  access_kind: string
+  publication_json: string
   entitlement_count: number
 }
 
@@ -95,8 +96,7 @@ export function parseManifest(raw: string): SkillManifest {
 export async function resolveSkillVersion(env: Env, walletAddress: string, skillId: string, skillVersion: number): Promise<LearningContext> {
   const row = await env.DB.prepare(
     `SELECT skills.id, skills.slug, skills.title, skills.summary, creators.display_name AS creator_name,
-            skill_versions.manifest_json,
-            (SELECT COUNT(*) FROM skill_prices WHERE skill_prices.skill_id = skills.id) AS price_count,
+            skill_versions.manifest_json, skill_versions.access_kind, skill_versions.publication_json,
             (SELECT COUNT(*) FROM entitlements WHERE entitlements.skill_id = skills.id AND entitlements.wallet_address = ?) AS entitlement_count
      FROM skills JOIN skill_versions ON skill_versions.skill_id = skills.id
      JOIN creators ON creators.id = skills.creator_id
@@ -105,20 +105,21 @@ export async function resolveSkillVersion(env: Env, walletAddress: string, skill
   ).bind(walletAddress, skillId, skillVersion).first<RuntimeRow>()
 
   if (!row) throw new HttpError(404, 'skill_version_not_found', 'This Path is no longer available. Refresh and choose it again.')
-  if (Number(row.price_count) > 0 && Number(row.entitlement_count) < 1) {
+  if (row.access_kind === 'paid' && Number(row.entitlement_count) < 1) {
     throw new HttpError(403, 'skill_entitlement_required', 'Unlock this Path in Truly before starting it on your Mac.')
   }
 
   const manifest = parseManifest(row.manifest_json)
+  const publication = JSON.parse(row.publication_json) as { title?: string; summary?: string; creatorName?: string }
   const step = manifest.steps[0]
   if (!step) throw new HttpError(503, 'skill_runtime_unavailable', 'The guided steps for this Path are not ready yet.')
 
   return {
     id: row.id,
     slug: row.slug,
-    title: row.title,
-    summary: row.summary,
-    creatorName: row.creator_name,
+    title: publication.title ?? row.title,
+    summary: publication.summary ?? row.summary,
+    creatorName: publication.creatorName ?? row.creator_name,
     outcomes: manifest.outcomes.slice(0, 8),
     prerequisites: manifest.prerequisites.slice(0, 8),
     supportedEnvironments: manifest.supportedEnvironments.slice(0, 8),

@@ -1,0 +1,57 @@
+.studio-screen { display: grid; gap: 22px; }
+.studio-kicker { display: block; color: var(--teal-dark); font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.studio-sign-in { display: grid; gap: 16px; }
+.studio-address { overflow-wrap: anywhere; font-size: 12px; }
+.studio-profile summary { min-height: 44px; cursor: pointer; padding-block: 12px; font-weight: 700; }
+.studio-profile summary::marker { color: var(--teal-dark); }
+.studio-profile summary > span:first-child { margin-right: 10px; }
+.studio-profile .plan-editor { margin-top: 16px; }
+.profile-status-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 9px; border-radius: 999px; color: var(--teal-dark); background: var(--teal-soft); font-size: 11px; font-weight: 700; text-transform: capitalize; vertical-align: middle; }
+.studio-profile-meta { overflow-wrap: anywhere; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.profile-save-actions { display: grid; gap: 10px; }
+.profile-save-actions .secondary-button { width: 100%; }
+.profile-save-status { margin: 0; color: var(--teal-dark); font-size: 12px; font-weight: 700; text-align: center; }
+.profile-save-status--error { color: #a62e3a; }
+.studio-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.studio-heading h2 { font-size: 20px; }
+.studio-library > p, .studio-save-state { font-size: 13px; color: var(--muted); margin-top: 12px; }
+.studio-path-list { display: grid; gap: 10px; margin-top: 16px; }
+.studio-path-list button { display: grid; gap: 8px; text-align: left; cursor: pointer; min-height: 72px; }
+.studio-path-list span { font-size: 12px; color: var(--muted); }
+.studio-published { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; }
+.studio-published span { display: flex; align-items: center; gap: 6px; }
+.studio-editor { min-width: 0; }
+.studio-fields { border: 0; padding: 0; margin: 20px 0; min-width: 0; }
+.studio-pair { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.studio-fields label, .studio-profile label { display: grid; gap: 8px; }
+.studio-pricing > label, .studio-tags label { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.studio-pricing > label:has(input[inputmode]) { display: grid; }
+.studio-pricing input[type=radio], .studio-tags input[type=checkbox] { width: 20px; min-height: 20px; margin: 0; accent-color: var(--teal); }
+.studio-step { border-block: 1px solid var(--border); padding-bottom: 16px; }
+.studio-step summary { color: var(--ink); font-weight: 700; overflow-wrap: anywhere; }
+.studio-step[open] > label, .studio-step h4 { margin-top: 16px; }
+.studio-reorder { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 8px; }
+.studio-reorder .secondary-button { min-height: 44px; min-width: 44px; padding: 10px; }
+.studio-resource { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin: 12px 0; display: grid; gap: 10px; }
+.studio-editor-actions { display: grid; gap: 12px; margin-top: 22px; }
+.studio-delete-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: #a62e3a; font: inherit; font-weight: 700; cursor: pointer; }
+.studio-delete-button:disabled { opacity: .45; cursor: not-allowed; }
+.studio-preview { display: grid; gap: 16px; margin-top: 22px; overflow-wrap: anywhere; }
+.studio-preview section { border-top: 1px solid var(--border); padding-top: 16px; display: grid; gap: 12px; }
+.studio-preview p { white-space: pre-wrap; }
+.creator-profile .studio-kicker { margin-top: 20px; }
+.creator-profile > .quiet-card { display: grid; gap: 14px; }
+.wallet-connect-dialog { width: min(480px, calc(100% - 24px)); max-height: calc(100dvh - 32px); margin: auto auto 12px; padding: 20px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); color: var(--ink); overflow-y: auto; }
+.wallet-connect-dialog::backdrop { background: rgb(15 24 24 / 40%); }
+.wallet-connect-dialog > .wallet-sheet-intro { margin: 8px 0 16px; color: var(--muted); font-size: 14px; }
+.wallet-connect-dialog > .primary-button { width: 100%; }
+.wallet-account-list { display: grid; gap: 10px; margin-top: 16px; }
+.wallet-account-list button { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; min-width: 0; }
+.wallet-account-list span { overflow-wrap: anywhere; font-size: 13px; }
+.wallet-account-list svg { flex-shrink: 0; }
+.wallet-connect-dialog .wallet-sheet-note { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; line-height: 1.55; color: var(--muted); }
+.review-decision { margin-top: 24px; }
+.review-decision .review-attestation { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; font-size: 13px; }
+.review-attestation input { width: 20px; min-height: 20px; flex-shrink: 0; accent-color: var(--teal); }
+.review-decision > p { font-size: 12px; color: var(--muted); }
+.learn-pane__heading { flex-wrap: wrap; }

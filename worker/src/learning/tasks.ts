@@ -7,6 +7,7 @@ import { resolveSkillVersion } from './access'
 import { activationKey, loadTaskSession } from './sessions'
 import { createTaskPlan, parseTaskPlan, type TaskPlan } from './task-plan'
 import { parseStoredResources, parseTaskResources, parseTaskWorkspaceUrl, type LearningLink } from './resources'
+import { firstUnfinishedStep, NEXT_TASK_STEP_SQL } from './progress-state'
 
 interface TaskRow {
   id: string; goal: string; title: string; outcome: string; plan_json: string
@@ -67,13 +68,31 @@ export async function createTask(request: Request, env: Env): Promise<Response> 
   const workspaceLink = parseTaskWorkspaceUrl(input.workspaceUrl)
   const resources = parseTaskResources(input.resources)
   await consumeLimit(env, `task-plan-wallet:${walletAddress}`, 4)
-  const plan = await createTaskPlan(getGroqConfiguration(env), learnerGoal)
+  const plan = await createTaskPlan(getGroqConfiguration(env), learnerGoal, fetch, [...(workspaceLink ? [workspaceLink] : []), ...resources])
   const id = crypto.randomUUID()
   const now = new Date().toISOString()
   const resourcesJson = JSON.stringify(resources)
   await env.DB.prepare(`INSERT INTO learning_tasks (id, wallet_address, goal, title, outcome, plan_json, workspace_url, resources_json, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`)
     .bind(id, walletAddress, learnerGoal, plan.title, plan.outcome, JSON.stringify(plan), workspaceLink?.url ?? null, resourcesJson, now, now).run()
   return json({ task: taskPayload({ id, goal: learnerGoal, title: plan.title, outcome: plan.outcome, plan_json: JSON.stringify(plan), workspace_url: workspaceLink?.url ?? null, resources_json: resourcesJson, source_kind: 'direct', source_skill_id: null, source_skill_version: null, creator_name: null, status: 'draft', created_at: now, updated_at: now }, plan) }, { status: 201 })
+}
+
+export async function updateTaskPlan(taskId: string, request: Request, env: Env): Promise<Response> {
+  const { walletAddress } = await requireWallet(request, env, 'tasks:edit')
+  const { row } = await loadOwnedTask(env, walletAddress, identifier(taskId, 'Task'))
+  if (row.source_kind !== 'direct' || row.status !== 'draft') throw new HttpError(409, 'task_plan_locked', 'Only a personal Task that has not started can be edited.')
+  const input = await readJson<{ plan?: unknown; updatedAt?: unknown }>(request, 24_576)
+  let plan: TaskPlan
+  try { plan = parseTaskPlan(input.plan) } catch { throw new HttpError(400, 'invalid_task_plan', 'Keep 1–8 clear steps, with an instruction and completion check for each.') }
+  if (plan.steps.some(step => !step.challenge || !step.rubric.length)) throw new HttpError(400, 'invalid_task_plan', 'Add a practice goal and at least one completion check to each step.')
+  if (typeof input.updatedAt !== 'string') throw new HttpError(400, 'invalid_task_plan', 'Reload this Task before editing it.')
+  const now = new Date(Math.max(Date.now(), Date.parse(row.updated_at) + 1)).toISOString()
+  const result = await env.DB.prepare(`UPDATE learning_tasks SET title = ?, outcome = ?, plan_json = ?, updated_at = ?
+    WHERE id = ? AND wallet_address = ? AND source_kind = 'direct' AND status = 'draft' AND updated_at = ?
+    AND NOT EXISTS (SELECT 1 FROM task_learning_sessions WHERE task_id = learning_tasks.id)`)
+    .bind(plan.title, plan.outcome, JSON.stringify(plan), now, taskId, walletAddress, input.updatedAt).run()
+  if (result.meta.changes !== 1) throw new HttpError(409, 'task_plan_changed', 'This Task changed or already started. Reload it before editing.')
+  return json({ task: taskPayload({ ...row, title: plan.title, outcome: plan.outcome, plan_json: JSON.stringify(plan), updated_at: now }, plan) })
 }
 
 export async function listTasks(request: Request, env: Env): Promise<Response> {
@@ -114,18 +133,23 @@ export async function activateTask(taskId: string, request: Request, env: Env): 
     if (repeated.device_id !== deviceId || repeated.task_id !== taskId) throw new HttpError(409, 'idempotency_key_reused', 'This Task is already opening elsewhere. Refresh and try again.')
     return json({ session: await loadTaskSession(env, repeated.session_id), resumed: true })
   }
+  const nextStepId = await firstUnfinishedStep(env, taskId, plan.steps)
+  if (!nextStepId) throw new HttpError(409, 'task_completed', 'This Task is complete. Find your saved result in Progress.')
   const existing = await env.DB.prepare(`SELECT id FROM task_learning_sessions WHERE wallet_address = ? AND device_id = ? AND task_id = ? AND status IN ('active', 'paused') ORDER BY started_at DESC LIMIT 1`)
     .bind(walletAddress, deviceId, taskId).first<{ id: string }>()
   const sessionId = existing?.id ?? crypto.randomUUID()
   const now = new Date().toISOString()
   const statements = [
     env.DB.prepare(`UPDATE learning_sessions SET status = 'paused', updated_at = ? WHERE device_id = ? AND status = 'active'`).bind(now, deviceId),
-    env.DB.prepare(`UPDATE task_learning_sessions SET status = 'paused', updated_at = ? WHERE device_id = ? AND status = 'active' AND id <> ?`).bind(now, deviceId, sessionId),
+    env.DB.prepare(`UPDATE task_learning_sessions SET status = 'paused', updated_at = ? WHERE (device_id = ? OR task_id = ?) AND status = 'active' AND id <> ?`).bind(now, deviceId, taskId, sessionId),
   ]
-  if (existing) statements.push(env.DB.prepare(`UPDATE task_learning_sessions SET status = 'active', updated_at = ? WHERE id = ? AND wallet_address = ? AND device_id = ?`).bind(now, sessionId, walletAddress, deviceId))
-  else statements.push(env.DB.prepare(`INSERT INTO task_learning_sessions (id, wallet_address, device_id, task_id, status, current_step, started_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`).bind(sessionId, walletAddress, deviceId, taskId, firstStep.id, now, now))
+  if (existing) statements.push(env.DB.prepare(`UPDATE task_learning_sessions SET status = 'active', current_step = ?, updated_at = ? WHERE id = ? AND wallet_address = ? AND device_id = ?`).bind(nextStepId, now, sessionId, walletAddress, deviceId))
+  else statements.push(env.DB.prepare(`INSERT INTO task_learning_sessions (id, wallet_address, device_id, task_id, status, current_step, started_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`).bind(sessionId, walletAddress, deviceId, taskId, nextStepId, now, now))
   statements.push(
-    env.DB.prepare(`UPDATE learning_tasks SET status = 'active', updated_at = ? WHERE id = ? AND wallet_address = ?`).bind(now, taskId, walletAddress),
+    env.DB.prepare(`UPDATE task_learning_sessions SET current_step = COALESCE(${NEXT_TASK_STEP_SQL}, current_step),
+      status = CASE WHEN ${NEXT_TASK_STEP_SQL} IS NULL THEN 'completed' ELSE 'active' END,
+      completed_at = CASE WHEN ${NEXT_TASK_STEP_SQL} IS NULL THEN ? ELSE NULL END WHERE id = ?`).bind(now, sessionId),
+    env.DB.prepare(`UPDATE learning_tasks SET status = (SELECT status FROM task_learning_sessions WHERE id = ?), updated_at = ? WHERE id = ? AND wallet_address = ?`).bind(sessionId, now, taskId, walletAddress),
     env.DB.prepare(`INSERT INTO task_activation_requests (wallet_address, idempotency_key, device_id, task_id, session_id) VALUES (?, ?, ?, ?, ?)`).bind(walletAddress, key, deviceId, taskId, sessionId),
   )
   await env.DB.batch(statements)

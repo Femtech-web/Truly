@@ -18,6 +18,8 @@ final class LearningSessionModel: ObservableObject {
     @Published var readRepliesAloud = UserDefaults.standard.bool(forKey: "truly.voice.read-replies")
     var allowsSpokenReplies = false
     @Published private(set) var activeLearningSession: DesktopLearningSession?
+    @Published private(set) var practiceMessage = ""
+    private var practiceTask: Task<Void, Never>?
     private let captureService = ScreenCaptureService()
     private let voiceRecorder = VoiceRecorder()
     private let speechPlayback = SpeechPlaybackService()
@@ -39,16 +41,55 @@ final class LearningSessionModel: ObservableObject {
     }
 
     var canSubmit: Bool {
-        activeLearningSession != nil && capturedScreen != nil &&
+        activeLearningSession?.status == "active" && capturedScreen != nil &&
             !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !phase.isBusy && !voiceState.isBusy
     }
 
     var canUseVoice: Bool {
-        activeLearningSession != nil && capturedScreen != nil && processorConsentGranted && !phase.isBusy && !voiceState.isBusy
+        activeLearningSession?.status == "active" && capturedScreen != nil && processorConsentGranted && !phase.isBusy && !voiceState.isBusy
     }
 
     var activeSourceTitle: String { activeLearningSession?.source.title ?? "No Task or Path selected" }
     var activeStepTitle: String { activeLearningSession?.currentStep.title ?? "Start from Truly in Nimiq Pay" }
+    var canCheckPractice: Bool {
+        activeLearningSession?.status == "active" && !(activeLearningSession?.currentStep.rubric ?? []).isEmpty &&
+        processorConsentGranted && !phase.isBusy && !voiceState.isBusy
+    }
+
+    // Called only by the explicit Task-panel action, after a fresh local capture.
+    func checkPractice() {
+        guard canCheckPractice, let session = activeLearningSession, let token = sessionToken(),
+              let image = capturedScreen, let displayFrame = capturedDisplayFrame,
+              let jpeg = Self.boundedJPEG(from: image) else { return }
+        let generation = captureGeneration
+        let request = LearningTurnBody(learningSessionId: session.id, stepId: session.currentStep.id,
+            mode: "guide", question: "Check my own visible work against this step’s practice criteria.",
+            frame: .init(mimeType: "image/jpeg", base64: jpeg.base64EncodedString(), focus: nil),
+            consent: .init(processor: "groq", revision: Self.processorConsentRevision, approved: true))
+        phase = .evaluatingAttempt
+        practiceMessage = "Checking your work…"
+        let key = UUID().uuidString
+        practiceTask = Task {
+            do {
+                let result = try await LearningTurnService().check(request, token: token, key: key)
+                guard !Task.isCancelled, generation == captureGeneration, sessionToken() == token,
+                      processorConsentGranted else { return }
+                activeLearningSession = result.session
+                let status = result.passed
+                    ? (result.session.status == "completed" ? "Task complete · AI-checked progress saved." : "Step complete · progress saved. Next: \(result.session.currentStep.title)")
+                    : "Not complete yet · progress unchanged."
+                practiceMessage = TrulyResponseText.plainText(from: [status, result.feedback].joined(separator: "\n\n"))
+                response = practiceMessage
+                phase = result.session.status == "completed" ? .complete : .idle
+                onResponseReady?(nil, nil, displayFrame, response)
+                if readRepliesAloud && allowsSpokenReplies { speechPlayback.speak(response) }
+            } catch {
+                guard !Task.isCancelled, generation == captureGeneration else { return }
+                practiceMessage = error.localizedDescription
+                phase = .failed(error.localizedDescription)
+            }
+        }
+    }
 
     func prepare() { refreshPermissions() }
 
@@ -130,8 +171,10 @@ final class LearningSessionModel: ObservableObject {
             do {
                 let turn = try await LearningTurnService().submit(request, token: token)
                 guard generation == captureGeneration else { return }
-                response = [turn.explanation, "Next: \(turn.nextAction)", turn.clarification]
-                    .compactMap { $0 }.joined(separator: "\n\n")
+                response = TrulyResponseText.plainText(from:
+                    [turn.explanation, "Next: \(turn.nextAction)", turn.clarification]
+                        .compactMap { $0 }.joined(separator: "\n\n")
+                )
                 phase = .idle
                 if readRepliesAloud && allowsSpokenReplies { speechPlayback.speak(response) }
                 if let target = turn.target {
@@ -147,6 +190,8 @@ final class LearningSessionModel: ObservableObject {
     }
 
     func resetSession() {
+        practiceTask?.cancel()
+        practiceTask = nil
         captureGeneration = UUID()
         question = ""
         response = ""
@@ -170,14 +215,22 @@ final class LearningSessionModel: ObservableObject {
     }
 
     func activateLearningSession(_ session: DesktopLearningSession?) {
-        guard activeLearningSession?.id != session?.id || activeLearningSession?.currentStep != session?.currentStep else { return }
+        guard activeLearningSession != session else { return }
+        // Polling can see our committed progress before the attempt response arrives.
+        // Keep that result alive when the session identity is unchanged.
+        if phase == .evaluatingAttempt, activeLearningSession?.id == session?.id {
+            activeLearningSession = session
+            return
+        }
+        let contextChanged = activeLearningSession?.id != session?.id || activeLearningSession?.currentStep != session?.currentStep || activeLearningSession?.status != session?.status
         activeLearningSession = session
-        resetSession()
+        if contextChanged { practiceMessage = ""; resetSession() }
     }
 
     func revokeProcessorConsent() {
         // Invalidate pending answers as well as pending recordings/transcripts.
         captureGeneration = UUID()
+        practiceTask?.cancel()
         cancelVoice()
         speechPlayback.stop()
         phase = .idle
@@ -303,6 +356,12 @@ private struct LearningTurnResponse: Decodable {
     let progressRecorded: Bool
 }
 
+private struct PracticeResponse: Decodable {
+    let passed: Bool
+    let feedback: String
+    let session: DesktopLearningSession
+}
+
 private enum LearningTurnError: LocalizedError {
     case invalidResponse
     case server(String)
@@ -319,6 +378,28 @@ private struct LearningTurnService {
     private struct ProblemResponse: Decodable {
         struct Problem: Decodable { let message: String }
         let error: Problem
+    }
+
+    func check(_ body: LearningTurnBody, token: String, key: String) async throws -> PracticeResponse {
+        let configured = Bundle.main.object(forInfoDictionaryKey: "TRULY_CORE_URL") as? String
+        guard let base = URL(string: configured ?? "http://127.0.0.1:8787") else { throw LearningTurnError.invalidResponse }
+        var request = URLRequest(url: base.appending(path: "/v1/learning/attempts"))
+        request.httpMethod = "POST"
+        request.httpBody = try JSONEncoder().encode(body)
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        request.setValue(key, forHTTPHeaderField: "idempotency-key")
+        request.timeoutInterval = 30
+        let data: Data
+        let response: URLResponse
+        do { (data, response) = try await URLSession.shared.data(for: request) }
+        catch { throw LearningTurnError.server("Truly could not confirm the check. Reconnect and refresh your Task before trying again.") }
+        guard let http = response as? HTTPURLResponse else { throw LearningTurnError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            let problem = try? JSONDecoder().decode(ProblemResponse.self, from: data)
+            throw LearningTurnError.server(problem?.error.message ?? "Truly could not check your work. Refresh and try again.")
+        }
+        return try JSONDecoder().decode(PracticeResponse.self, from: data)
     }
 
     func submit(_ body: LearningTurnBody, token: String) async throws -> LearningTurnResponse {

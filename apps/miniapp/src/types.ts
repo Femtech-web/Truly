@@ -10,6 +10,7 @@ export interface LearningLink {
 export type SkillId = string
 
 export interface Lesson {
+  id: string
   title: string
   detail: string
   state: 'complete' | 'current' | 'next'
@@ -37,7 +38,7 @@ export interface Skill {
   version: number
   tags: { slug: string; label: string; family: string }[]
   runtimeReady: boolean
-  prices: { asset: 'NIM' | 'USDT'; amountAtomic: string; decimals: number; active: number }[]
+  prices: { asset: 'NIM' | 'USDT'; amountAtomic: string; decimals: number; active: number; checkoutEnabled?: boolean }[]
 }
 
 export interface Device {
@@ -45,6 +46,25 @@ export interface Device {
   name: string
   platform: string
   status: 'active' | 'revoked'
+}
+
+export interface WalletChainStatus {
+  network: 'nimiq-testnet'
+  availableAtomic: string
+  observedAtBlock: string
+}
+
+export interface WalletActivityOrder {
+  id: string
+  pathId: string
+  pathTitle: string | null
+  asset: 'NIM' | 'USDT'
+  network: 'nimiq-testnet' | 'polygon'
+  amountAtomic: string
+  decimals: number
+  transactionHash: string | null
+  status: 'quoted' | 'submitted' | 'validated' | 'rejected'
+  createdAt: string
 }
 
 export interface ActiveLearningSession {
@@ -80,6 +100,7 @@ export interface ActiveLearningSession {
   }
   startedAt: string
   updatedAt: string
+  progress?: { completedStepIds: string[]; completedCount: number; total: number; assessment: 'ai_checked' }
 }
 
 export interface LearningTask {
@@ -87,7 +108,7 @@ export interface LearningTask {
   goal: string
   title: string
   outcome: string
-  steps: Array<{ id: string; title: string; summary: string }>
+  steps: Array<{ id: string; title: string; summary: string; challenge: string | null; rubric: string[] }>
   workspaceLink: LearningLink | null
   resources: LearningLink[]
   source: { kind: 'direct' | 'path'; pathId: string | null; pathVersion: number | null; creatorName: string | null }

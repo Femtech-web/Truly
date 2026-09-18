@@ -37,6 +37,13 @@
   color: var(--truly-700);
 }
 
+.nav-links > a[aria-current='page'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--truly-500);
+  text-underline-offset: 6px;
+}
+
 .nav-cta {
   display: inline-flex;
   min-height: 38px;

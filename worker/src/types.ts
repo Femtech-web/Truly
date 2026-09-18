@@ -8,6 +8,15 @@ export interface Env {
   GROQ_API_KEY?: string
   GROQ_DATA_CONTROLS_CONFIRMED?: string
   AI_DAILY_LIMIT?: string
+  NIM_PAYMENTS_ENABLED?: string
+  NIM_RPC_URL?: string
+  NIM_PAYMENT_RECIPIENT?: string
+  USDT_PAYMENTS_ENABLED?: string
+  USDT_MAINNET_APPROVED?: string
+  POLYGON_RPC_URL?: string
+  USDT_PAYMENT_RECIPIENT?: string
+  CREATOR_REVIEW_TOKEN?: string
+  REVIEWER_WALLETS?: string
 }
 
 export interface PairingChallengeRow {

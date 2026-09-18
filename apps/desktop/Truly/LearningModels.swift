@@ -1,6 +1,64 @@
 import Foundation
 import CoreGraphics
 
+enum LearningReadyNoticePlacement: Equatable {
+    case besideCompanion
+    case screenCorner
+}
+
+enum LearningReadyNoticePolicy {
+    static func placement(companionVisible: Bool) -> LearningReadyNoticePlacement {
+        companionVisible ? .besideCompanion : .screenCorner
+    }
+
+    static func message(companionVisible: Bool) -> String {
+        companionVisible
+            ? "Ready to begin on this Mac."
+            : "Loaded on Truly. The companion stays hidden; show it anytime from the menu bar."
+    }
+}
+
+enum TrulyResponseText {
+    static func plainText(from raw: String) -> String {
+        let inline: String
+        do {
+            let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+            inline = String(try AttributedString(markdown: raw, options: options).characters)
+        } catch {
+            inline = raw
+        }
+
+        var insideCodeFence = false
+        var blankLinePending = false
+        var output: [String] = []
+        for sourceLine in inline.components(separatedBy: .newlines) {
+            let trimmed = sourceLine.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
+                insideCodeFence.toggle()
+                continue
+            }
+
+            var line = sourceLine
+            if !insideCodeFence {
+                line = line.replacingOccurrences(of: #"^\s{0,3}#{1,6}\s+"#, with: "", options: .regularExpression)
+                line = line.replacingOccurrences(of: #"^\s*>\s?"#, with: "", options: .regularExpression)
+                line = line.replacingOccurrences(of: #"^\s*[-+*]\s+"#, with: "• ", options: .regularExpression)
+            }
+            line = line.replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "__", with: "")
+                .replacingOccurrences(of: "`", with: "")
+
+            if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                if !output.isEmpty { blankLinePending = true }
+                continue
+            }
+            if blankLinePending { output.append(""); blankLinePending = false }
+            output.append(line.trimmingCharacters(in: .whitespaces))
+        }
+        return output.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 enum LearningMode: String, CaseIterable, Identifiable {
     case explain = "Explain"
     case guide = "Guide"
@@ -96,6 +154,13 @@ struct DesktopLearningSession: Decodable, Equatable, Sendable {
     let currentStep: Step
     let startedAt: String
     let updatedAt: String
+    struct Progress: Decodable, Equatable, Sendable {
+        let completedStepIds: [String]
+        let completedCount: Int
+        let total: Int
+        let assessment: String
+    }
+    let progress: Progress?
 
     var preferredWorkspaceLink: LearningLink? {
         currentStep.workspaceLink ?? source.workspaceLink

@@ -14,41 +14,33 @@ final class CompanionPanelController {
     init(onInvoke: @escaping (CGPoint) -> Void) { self.onInvoke = onInvoke }
 
     func show(greeting: Bool = false) {
-        if panel == nil {
-            let panel = makePanel(size: CGSize(width: 40, height: 44))
-            let view = CompanionHitView(frame: CGRect(x: 0, y: 0, width: 40, height: 44))
-            view.onInvoke = { [weak self] point in self?.onInvoke(point) }
-            view.onMove = { [weak self] _ in self?.positionNoticeBesideCompanion() }
-            panel.contentView = view
-            view.setAccessibilityElement(true)
-            view.setAccessibilityRole(.button)
-            view.setAccessibilityLabel("Share this screen with Truly")
-            view.setAccessibilityHelp("Drag to position. Click to share this display and open the learning workspace.")
-            let frame = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1000, height: 700)
-            panel.setFrameOrigin(CGPoint(x: frame.maxX - 90, y: frame.midY))
-            self.panel = panel
-        }
+        prepareCompanionPanel()
         // Recover a companion stranded by an unplugged monitor.
         if let panel, !NSScreen.screens.contains(where: { $0.visibleFrame.intersects(panel.frame) }), let screen = NSScreen.main {
             panel.setFrameOrigin(CGPoint(x: screen.visibleFrame.maxX - 90, y: screen.visibleFrame.midY))
         }
         panel?.orderFrontRegardless()
         updateFollowing()
+        positionNotice(placement: .besideCompanion)
         if greeting { showBubble(title: "Truly is ready.", message: following ? "Resume voice from the menu when you’re ready." : "Drag me beside your work. Click to ask a question.") }
     }
 
     func showLearningReady(
         title: String,
+        companionVisible: Bool,
         workspaceLink: DesktopLearningSession.LearningLink?,
         onOpen: @escaping (DesktopLearningSession.LearningLink) -> Void
     ) {
-        show()
+        prepareCompanionPanel()
+        if companionVisible { show() }
+        let placement = LearningReadyNoticePolicy.placement(companionVisible: companionVisible)
         showBubble(
             title: title,
-            message: "Ready to begin on this Mac.",
+            message: LearningReadyNoticePolicy.message(companionVisible: companionVisible),
             actionLabel: workspaceLink.map { "Open \($0.host)" },
             action: workspaceLink.map { link in { onOpen(link) } },
-            size: CGSize(width: 280, height: workspaceLink == nil ? 90 : 128)
+            size: CGSize(width: 280, height: workspaceLink == nil ? 104 : 142),
+            placement: placement
         )
     }
 
@@ -89,7 +81,8 @@ final class CompanionPanelController {
         message: String,
         actionLabel: String? = nil,
         action: (() -> Void)? = nil,
-        size: CGSize = CGSize(width: 300, height: 112)
+        size: CGSize = CGSize(width: 300, height: 112),
+        placement: LearningReadyNoticePlacement = .besideCompanion
     ) {
         dismissGreeting()
         guard panel != nil else { return }
@@ -102,17 +95,40 @@ final class CompanionPanelController {
         )
         bubble.orderFrontRegardless()
         greetingPanel = bubble
-        positionNoticeBesideCompanion()
+        positionNotice(placement: placement)
     }
 
     private func dismissGreeting() {
         greetingPanel?.orderOut(nil); greetingPanel = nil
     }
 
-    private func positionNoticeBesideCompanion() {
+    private func prepareCompanionPanel() {
+        guard panel == nil else { return }
+        let panel = makePanel(size: CGSize(width: 40, height: 44))
+        let view = CompanionHitView(frame: CGRect(x: 0, y: 0, width: 40, height: 44))
+        view.onInvoke = { [weak self] point in self?.onInvoke(point) }
+        view.onMove = { [weak self] _ in self?.positionNotice(placement: .besideCompanion) }
+        panel.contentView = view
+        view.setAccessibilityElement(true)
+        view.setAccessibilityRole(.button)
+        view.setAccessibilityLabel("Share this screen with Truly")
+        view.setAccessibilityHelp("Drag to position. Click to share this display and open the learning workspace.")
+        let frame = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1000, height: 700)
+        panel.setFrameOrigin(CGPoint(x: frame.maxX - 90, y: frame.midY))
+        self.panel = panel
+    }
+
+    private func positionNotice(placement: LearningReadyNoticePlacement) {
         guard let panel, let greetingPanel,
               let screen = panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame else { return }
         let bubbleSize = greetingPanel.frame.size
+        if placement == .screenCorner {
+            greetingPanel.setFrameOrigin(CGPoint(
+                x: screen.maxX - bubbleSize.width - 14,
+                y: screen.maxY - bubbleSize.height - 14
+            ))
+            return
+        }
         var x = panel.frame.minX - bubbleSize.width - 8
         if x < screen.minX + 8 { x = panel.frame.maxX + 8 }
         x = min(max(x, screen.minX + 8), screen.maxX - bubbleSize.width - 8)

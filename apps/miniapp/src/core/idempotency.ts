@@ -4,10 +4,10 @@ export interface BrowserCrypto {
 }
 
 export function createIdempotencyKey(source: BrowserCrypto = globalThis.crypto as BrowserCrypto): string {
-  if (typeof source.randomUUID === 'function') return source.randomUUID()
+  if (typeof source?.randomUUID === 'function') return source.randomUUID()
 
   const bytes = new Uint8Array(16)
-  if (typeof source.getRandomValues === 'function') {
+  if (typeof source?.getRandomValues === 'function') {
     source.getRandomValues(bytes)
   } else {
     // The key deduplicates a request; it is not an authentication secret. This

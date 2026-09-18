@@ -7,8 +7,13 @@ import { createWalletChallenge, verifyWalletChallenge, listDevices, revokeDevice
 import { rateLimit } from './rate-limits'
 import { createLearningTurn } from './learning/turn'
 import { activateLearningSession, getDesktopLearningSession, listWalletLearningSessions } from './learning/sessions'
-import { createTask, activateTask, listTasks } from './learning/tasks'
+import { createTask, activateTask, listTasks, updateTaskPlan } from './learning/tasks'
+import { readBrowserSession, logoutBrowserSession } from './browser-session'
 import { transcribeVoice } from './learning/speech'
+import { createPracticeAttempt } from './learning/practice'
+import { bindOrderSender, createOrder, listPurchases, verifyOrder } from './payments/orders'
+import { getWalletStatus } from './wallet/status'
+import { studioRequest } from './creator-studio'
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -28,8 +33,20 @@ export default {
       const segments = url.pathname.split('/').filter(Boolean)
       let response: Response
 
-      if (request.method === 'GET' && url.pathname === '/health') {
+      if (segments[0] === 'v1' && segments[1] === 'studio' && ['GET', 'POST'].includes(request.method)) {
+        response = await studioRequest(segments.slice(2), request, env)
+      } else if (request.method === 'GET' && url.pathname === '/health') {
         response = json({ status: 'ok' })
+      } else if (request.method === 'GET' && url.pathname === '/v1/wallet/status') {
+        response = await getWalletStatus(request, env)
+      } else if (request.method === 'GET' && url.pathname === '/v1/purchases') {
+        response = await listPurchases(request, env)
+      } else if (request.method === 'POST' && url.pathname === '/v1/purchases') {
+        response = await createOrder(request, env)
+      } else if (request.method === 'POST' && segments.length === 4 && segments[0] === 'v1' && segments[1] === 'purchases' && segments[3] === 'bind') {
+        response = await bindOrderSender(segments[2]!, request, env)
+      } else if (request.method === 'POST' && segments.length === 4 && segments[0] === 'v1' && segments[1] === 'purchases' && segments[3] === 'verify') {
+        response = await verifyOrder(segments[2]!, request, env)
       } else if (request.method === 'GET' && url.pathname === '/v1/catalog') {
         response = await getCatalog(env)
       } else if (request.method === 'GET' && url.pathname === '/v1/desktop/session') {
@@ -42,6 +59,8 @@ export default {
         response = await activateLearningSession(request, env)
       } else if (request.method === 'POST' && url.pathname === '/v1/learning/turn') {
         response = await createLearningTurn(request, env)
+      } else if (request.method === 'POST' && url.pathname === '/v1/learning/attempts') {
+        response = await createPracticeAttempt(request, env)
       } else if (request.method === 'POST' && url.pathname === '/v1/voice/transcriptions') {
         response = await transcribeVoice(request, env)
       } else if (request.method === 'GET' && url.pathname === '/v1/tasks') {
@@ -52,6 +71,12 @@ export default {
         response = await activateTask(segments[2], request, env)
       } else if (request.method === 'POST' && url.pathname === '/v1/auth/challenges') {
         response = await createWalletChallenge(request, env)
+      } else if (request.method === 'GET' && url.pathname === '/v1/auth/session') {
+        response = await readBrowserSession(request, env)
+      } else if (request.method === 'POST' && url.pathname === '/v1/auth/session/logout') {
+        response = await logoutBrowserSession(request, env)
+      } else if (request.method === 'POST' && segments.length === 4 && segments[0] === 'v1' && segments[1] === 'tasks' && segments[3] === 'plan') {
+        response = await updateTaskPlan(segments[2]!, request, env)
       } else if (request.method === 'POST' && segments.length === 5 && segments[0] === 'v1' && segments[1] === 'auth' && segments[2] === 'challenges' && segments[3] && segments[4] === 'verify') {
         response = await verifyWalletChallenge(segments[3], request, env)
       } else if (request.method === 'GET' && url.pathname === '/v1/devices') {

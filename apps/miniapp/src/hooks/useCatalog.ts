@@ -48,6 +48,7 @@ export function useCatalog() {
         prices: skill.prices,
         progress: 0,
         lessons: skill.steps.map((step, stepIndex) => ({
+          id: step.id,
           title: step.title,
           detail: step.summary,
           state: stepIndex === 0 ? 'current' : 'next',

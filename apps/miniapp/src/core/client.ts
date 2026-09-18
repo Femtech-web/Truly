@@ -25,6 +25,10 @@ export interface PairedDevice {
   }
 }
 
+export class CoreRequestError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) { super(message) }
+}
+
 export function hasCoreConfiguration(): boolean {
   return Boolean(configuredCoreUrl)
 }
@@ -57,8 +61,10 @@ export async function coreRequest<T>(path: string, init?: RequestInit): Promise<
 
   let response: Response
   try {
+    const headers = new Headers(init?.headers)
+    headers.set('x-truly-browser', '1')
     response = await fetch(`${configuredCoreUrl.replace(/\/$/, '')}${path}`, {
-      ...init, signal: init?.signal ?? AbortSignal.timeout(15_000),
+      ...init, headers, credentials: 'include', signal: init?.signal ?? AbortSignal.timeout(25_000),
     })
   } catch {
     throw new Error('Truly could not connect. Check your connection and try again.')
@@ -66,7 +72,7 @@ export async function coreRequest<T>(path: string, init?: RequestInit): Promise<
   const body = await response.json() as T & CoreProblem
 
   if (!response.ok) {
-    throw new Error(body.error?.message || 'Truly could not finish that. Please try again.')
+    throw new CoreRequestError(response.status, body.error?.code || 'request_failed', body.error?.message || 'Truly could not finish that. Please try again.')
   }
 
   return body

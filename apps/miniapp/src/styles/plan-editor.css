@@ -1,0 +1,13 @@
+.plan-editor { display: grid; gap: 12px; }
+.plan-editor > p { margin: 0 0 4px; color: var(--muted); font-size: 13px; }
+.plan-editor label { color: var(--ink); font-size: 13px; font-weight: 600; }
+.plan-editor input, .plan-editor textarea { width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
+.plan-editor input:focus-visible, .plan-editor textarea:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.plan-editor textarea { resize: vertical; }
+.plan-editor fieldset { min-width: 0; display: grid; gap: 10px; margin: 6px 0; padding: 16px; border: 1px solid var(--border); border-radius: 14px; }
+.plan-editor legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
+.plan-editor details { display: grid; margin-top: 4px; }
+.plan-editor details label, .plan-editor details textarea, .plan-editor details small { display: block; margin-top: 10px; }
+.plan-editor summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 13px; color: var(--muted); }
+.plan-editor small { color: var(--muted); font-size: 12px; }
+.plan-editor__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }

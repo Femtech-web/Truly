@@ -122,9 +122,16 @@ final class LocalVoiceService: ObservableObject {
             let text = transcript ?? ""
             let spokenQuestion = TrulyWakePhrase.question(in: text)
             let questionStart = text.utf16.count - (spokenQuestion?.utf16.count ?? 0)
-            let segments = result?.bestTranscription.segments.filter { $0.substringRange.location >= questionStart } ?? []
-            let uncertain = segments.isEmpty || segments.contains { $0.confidence < 0.5 }
             let final = result?.isFinal ?? false
+            let segments = result?.bestTranscription.segments ?? []
+            let wakeRange = TrulyWakePhrase.range(in: text).map { NSRange($0, in: text) }
+            let wakeConfidences = segments.filter { segment in
+                guard let wakeRange else { return false }
+                return NSIntersectionRange(segment.substringRange, wakeRange).length > 0
+            }.map(\.confidence)
+            let questionConfidences = segments.filter { $0.substringRange.location >= questionStart }.map(\.confidence)
+            let uncertain = TrulyVoiceRecognitionPolicy.requiresReview(isFinal: final, wakeConfidences: wakeConfidences,
+                                                                         questionConfidences: questionConfidences)
             let failed = error != nil
             let hadResult = result != nil
             Task { @MainActor [weak self] in
@@ -146,6 +153,16 @@ final class LocalVoiceService: ObservableObject {
 
     private func receive(_ spokenQuestion: String?, final: Bool, uncertain: Bool) {
         guard state == .armed || state == .listening || finishing else { return }
+        if TrulyVoiceRecognitionPolicy.discardsCorrectedWake(question: spokenQuestion, isFinal: final) {
+            // Discard even when the silence timer has begun finalization.
+            question = ""; needsReview = false
+            beginSegment()
+            return
+        }
+        if spokenQuestion == nil && (state == .listening || finishing) {
+            question = ""; needsReview = true
+            if !finishing { armSilenceTimer() }
+        }
         if let spokenQuestion {
             if state == .armed {
                 setState(.listening)
@@ -166,7 +183,7 @@ final class LocalVoiceService: ObservableObject {
                 if !finishing { armSilenceTimer() }
             }
             if final { needsReview = uncertain; deliverQuestion() }
-        } else if final && state == .armed { beginSegment() }
+        }
     }
 
     private func armSilenceTimer() {

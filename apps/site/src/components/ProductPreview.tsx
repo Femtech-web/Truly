@@ -1,85 +1,45 @@
-import { useState } from 'react'
-import { modeContent, type LearningMode } from '../content/siteContent'
+import { Check, Mic, Monitor, WalletCards } from 'lucide-react'
 import { BrandMark } from './BrandMark'
 import { Reveal } from './Reveal'
 
 export function ProductPreview() {
-  const [mode, setMode] = useState<LearningMode>('explain')
-  const activeMode = modeContent[mode]
-
   return (
-    <Reveal
-      as="section"
-      id="product"
-      className="product-showcase shell"
-      aria-label="Interactive Truly product preview"
-    >
-      <div className="showcase-canvas">
-        <div className="product-window">
-          <div className="window-bar">
-            <div className="window-controls" aria-hidden="true"><i /><i /><i /></div>
-            <span className="window-title">React Effects · Visual Studio Code</span>
-            <span className="share-state"><i aria-hidden="true" /> Screen shared</span>
-          </div>
-
-          <div className="workspace">
-            <div className="editor">
-              <div className="editor-header"><span>ProfileCard.tsx</span><span>×</span></div>
-              <div className="code" aria-label="Example React code">
-                <div><b>1</b><code><em>export function</em> ProfileCard() {'{'}</code></div>
-                <div className={activeMode.activeLine === 2 ? 'code-line--active' : ''}>
-                  <b>2</b><code>  <em>useEffect</em>(() =&gt; {'{'}</code>
-                </div>
-                <div><b>3</b><code>    fetchUsers()</code></div>
-                <div className={activeMode.activeLine === 4 ? 'code-line--active' : ''}>
-                  <b>4</b><code>  {'}'}, [])</code>
-                </div>
-                <div><b>5</b><code>&nbsp;</code></div>
-                <div><b>6</b><code>  <em>return</em> &lt;UserList /&gt;</code></div>
-                <div><b>7</b><code>{'}'}</code></div>
-              </div>
-              <div className={`screen-pointer screen-pointer--${mode}`} aria-hidden="true">
-                <span className="cursor-shape" />
-                <span className="companion-dot"><i /></span>
-              </div>
-            </div>
-
-            <aside className="assistant-panel" aria-label={`${activeMode.label} mode response`}>
-              <div className="assistant-heading">
-                <div className="assistant-identity"><BrandMark /><span>Truly</span></div>
-                <span className="assistant-context">{activeMode.context}</span>
-              </div>
-
-              <div className="mode-switch" aria-label="Choose learning mode">
-                {(Object.keys(modeContent) as LearningMode[]).map((modeName) => (
-                  <button
-                    key={modeName}
-                    className={mode === modeName ? 'mode-button mode-button--active' : 'mode-button'}
-                    type="button"
-                    aria-pressed={mode === modeName}
-                    onClick={() => setMode(modeName)}
-                  >
-                    {modeContent[modeName].label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="learner-question"><span>You</span><p>Why does this only run once?</p></div>
-
-              <div key={mode} className="assistant-answer mode-content-swap" aria-live="polite">
-                <p>{activeMode.response}</p>
-                <button type="button">{activeMode.action} <span aria-hidden="true">→</span></button>
-              </div>
-
-              <div className="assistant-footer">
-                <span><i aria-hidden="true" /> Looking at line {activeMode.activeLine}</span>
-                <span>1 of 3</span>
-              </div>
-            </aside>
+    <Reveal as="section" id="product" className="product-showcase shell" aria-label="Truly product preview">
+      <div className="product-stage" aria-label="A Truly Path moving from phone to the Mac companion">
+        <div className="product-phone">
+          <div className="product-phone__bar"><div><BrandMark /><b>Truly</b></div><span>NQ47…2AG1</span></div>
+          <div className="product-phone__body">
+            <small>Your current Path</small>
+            <h3>NIM payments users can trust</h3>
+            <p>Set a clear price</p>
+            <div className="product-phone__progress"><i /></div>
+            <div className="product-phone__meta"><span>1 of 3</span><span>In progress</span></div>
+            <button type="button">Continue on my Mac <span aria-hidden="true">→</span></button>
           </div>
         </div>
+
+        <div className="product-handoff" aria-hidden="true"><span>Task ready</span><i>→</i></div>
+
+        <div className="product-desktop">
+          <div className="product-desktop__bar"><i /><i /><i /><span>Nimiq Provider</span></div>
+          <div className="product-desktop__page">
+            <div className="product-page-copy"><small>NIMIQ MINI APPS</small><h3>Show a clear NIM price</h3><p>Amounts are represented in integer Luna and shown to people in NIM.</p><div className="product-price"><span>Checkout amount</span><strong>0.01 NIM</strong></div></div>
+          </div>
+          <aside className="product-companion">
+            <div className="product-companion__head"><div><BrandMark /><b>Truly</b></div><span>Step 1 of 3</span></div>
+            <div className="product-companion__input"><Mic size={15} /><span>Ask about what you see</span></div>
+            <div className="product-companion__answer"><small>You asked</small><p>Why is this 1,000 Luna?</p><div>One NIM contains 100,000 Luna, so 0.01 NIM is 1,000 Luna. Keep the integer value in the payment request and format it as NIM for the person paying.</div></div>
+            <button type="button"><Check size={15} /> Check my work</button>
+          </aside>
+          <div className="product-complete"><Check size={15} /><span><b>Step complete</b>Progress saved to your Task</span></div>
+        </div>
       </div>
-      <p className="preview-caption">Interactive preview of the native macOS learning loop</p>
+
+      <div className="product-proof">
+        <span><WalletCards size={16} /> Wallet-owned access</span>
+        <span><Monitor size={16} /> Native Mac companion</span>
+        <span><Check size={16} /> Visible work checked</span>
+      </div>
     </Reveal>
   )
 }

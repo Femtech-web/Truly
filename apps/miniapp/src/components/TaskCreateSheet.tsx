@@ -88,7 +88,7 @@ export function TaskCreateSheet({ busy, requestMessage, open, onClose, onCreate,
       <section ref={dialogRef} className="task-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="sheet-grabber" aria-hidden="true" />
         <header className="task-sheet__header">
-          <div><h2 id={titleId}>Create a Task</h2><p>Turn one goal into a private plan for your Mac.</p></div>
+          <div><h2 id={titleId}>Create a Task</h2><p>Describe your goal. Truly will suggest a focused plan.</p></div>
           <button className="icon-button" type="button" aria-label="Close" disabled={busy} onClick={onClose}><X size={17} /></button>
         </header>
 
@@ -116,7 +116,7 @@ export function TaskCreateSheet({ busy, requestMessage, open, onClose, onCreate,
 
           {(error || requestMessage) && <p className="form-error" role="alert">{error || requestMessage}</p>}
           <button className="primary-button" type="submit" disabled={busy || goal.trim().length < 4}>{busy ? 'Preparing your Task…' : 'Create Task'} <ArrowRight size={16} /></button>
-          <p className="task-sheet__privacy">Private to your wallet. You review the plan before sending it to a Mac.</p>
+          <p className="task-sheet__privacy">Private to your wallet. Review or edit the AI-suggested plan before starting. Links are saved as resources; their pages are not read to prepare this plan.</p>
         </form>
       </section>
     </div>

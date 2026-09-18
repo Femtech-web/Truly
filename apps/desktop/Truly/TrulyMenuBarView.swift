@@ -28,19 +28,18 @@ struct TrulyMenuBarView: View {
                     .accessibilityLabel(pairing.state.label)
             }
 
-            if let session = pairing.activeLearningSession {
+            if let session = learning.activeLearningSession {
                 Button(action: controller.openTaskPanel) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(session.source.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                        Text("Step \(session.currentStep.index) of \(session.currentStep.total)")
+                        Text(session.status == "completed" ? "Complete · AI-checked" : "Step \(session.currentStep.index) of \(session.currentStep.total)")
                             .font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(TrulyTheme.canvas, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }
-                .buttonStyle(.plain)
-                .trulyPointingCursor()
+                .buttonStyle(TrulyMenuActionStyle())
             } else if pairing.state == .paired {
                 Text("Choose a Task or Path in Truly on your phone to begin.")
                     .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
@@ -68,28 +67,28 @@ struct TrulyMenuBarView: View {
                         .foregroundStyle(TrulyTheme.muted).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     if case .unavailable = voice.state {
-                        Button("Retry", action: controller.retryVoice).buttonStyle(.plain)
+                        Button("Retry", action: controller.retryVoice).buttonStyle(TrulyMenuActionStyle())
                     } else {
-                        Button(controller.voicePaused ? "Resume" : "Pause", action: controller.toggleVoicePause).buttonStyle(.plain)
+                        Button(controller.voicePaused ? "Resume" : "Pause", action: controller.toggleVoicePause).buttonStyle(TrulyMenuActionStyle())
                     }
                 }
                 Button("Record a question", action: controller.recordVoiceQuestion)
-                    .buttonStyle(.plain).font(.system(size: 11))
+                    .buttonStyle(TrulyMenuActionStyle()).font(.system(size: 11))
                     .disabled(!controller.canRecordQuestion)
                     .help("Deliberately records one question for transcription with Groq, without wake detection")
             }
             Divider()
             HStack {
-                Button("Open Task", action: controller.openTaskPanel).buttonStyle(.plain)
+                Button("Open Task", action: controller.openTaskPanel).buttonStyle(TrulyMenuActionStyle())
                     .disabled(pairing.activeLearningSession == nil)
                 Spacer()
-                Button("Ask Truly", action: controller.openWorkspace).buttonStyle(.plain)
+                Button("Ask Truly", action: controller.openWorkspace).buttonStyle(TrulyMenuActionStyle())
             }
-            Button(controller.companionVisible ? "Hide companion" : "Show companion", action: controller.toggleCompanion).buttonStyle(.plain)
+            Button(controller.companionVisible ? "Hide companion" : "Show companion", action: controller.toggleCompanion).buttonStyle(TrulyMenuActionStyle())
             HStack {
-                Button("Settings…", action: controller.openSettings).buttonStyle(.plain)
+                Button("Settings…", action: controller.openSettings).buttonStyle(TrulyMenuActionStyle())
                 Spacer()
-                Button("Quit") { NSApp.terminate(nil) }.buttonStyle(.plain)
+                Button("Quit") { NSApp.terminate(nil) }.buttonStyle(TrulyMenuActionStyle())
             }
         }
         .padding(16)
@@ -104,15 +103,51 @@ struct TrulyMenuBarView: View {
 
 }
 
+/// Native-sized actions with hover and press feedback, without layout shifts or animation.
+private struct TrulyMenuActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        MenuActionBody(configuration: configuration)
+    }
+
+    private struct MenuActionBody: View {
+        let configuration: ButtonStyle.Configuration
+        @State private var hovered = false
+        @Environment(\.isEnabled) private var enabled
+
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 5)
+                .padding(.vertical, 3)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(enabled && configuration.isPressed ? TrulyTheme.teal.opacity(0.16)
+                              : enabled && hovered ? TrulyTheme.teal.opacity(0.08) : .clear)
+                        .allowsHitTesting(false)
+                )
+                .contentShape(Rectangle())
+                .opacity(enabled ? 1 : 0.45)
+                .onHover { inside in
+                    hovered = inside
+                    if inside && enabled { NSCursor.pointingHand.set() }
+                    else { NSCursor.arrow.set() }
+                }
+                .onChange(of: enabled) { _, value in
+                    if hovered { (value ? NSCursor.pointingHand : NSCursor.arrow).set() }
+                }
+        }
+    }
+}
+
 struct TrulyTaskPanelView: View {
     enum Section: String, CaseIterable, Identifiable { case overview = "Overview", resources = "Resources"; var id: String { rawValue } }
     @ObservedObject var controller: DesktopAppController
     @EnvironmentObject private var pairing: DevicePairingModel
     @State private var section: Section = .overview
+    @EnvironmentObject private var learning: LearningSessionModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let session = pairing.activeLearningSession {
+            if let session = learning.activeLearningSession {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(session.source.kind == "task" ? "Private Task" : (session.source.creatorName.map { "Path by \($0)" } ?? "Creator Path"))
                         .font(.system(size: 10, weight: .semibold)).foregroundStyle(TrulyTheme.tealDark)
@@ -142,7 +177,7 @@ struct TrulyTaskPanelView: View {
     private func overview(_ session: DesktopLearningSession) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Step \(session.currentStep.index) of \(session.currentStep.total)")
+                Text(session.status == "completed" ? "Task complete" : "Step \(session.currentStep.index) of \(session.currentStep.total)")
                     .font(.system(size: 10, weight: .semibold)).foregroundStyle(TrulyTheme.muted)
                 Text(session.currentStep.title).font(.system(size: 16, weight: .semibold))
                 Text(session.currentStep.summary).font(.system(size: 12)).foregroundStyle(TrulyTheme.text)
@@ -163,12 +198,32 @@ struct TrulyTaskPanelView: View {
                 }
             }
 
+            if let progress = session.progress {
+                Text("\(progress.completedCount) of \(progress.total) steps complete · AI-checked")
+                    .font(.system(size: 11)).foregroundStyle(TrulyTheme.muted)
+            }
             if let challenge = session.currentStep.challenge {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Practice goal").font(.system(size: 11, weight: .semibold))
                     Text(challenge).font(.system(size: 12)).foregroundStyle(TrulyTheme.text)
-                    Text("Verified practice checks are not available yet.").font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
+                    ForEach(session.currentStep.rubric ?? [], id: \.self) { criterion in
+                        Text("• \(criterion)").font(.system(size: 11)).foregroundStyle(TrulyTheme.text)
+                    }
+                    Text("Show your own work, not a tutorial. Check my work shares one fresh screen with Groq. AI checks can be wrong; this is not certification.")
+                        .font(.system(size: 10)).foregroundStyle(TrulyTheme.muted)
+                    Button(learning.phase == .evaluatingAttempt ? "Checking…" : "Check my work") { controller.checkPractice() }
+                        .buttonStyle(TrulyPrimaryButtonStyle()).disabled(!learning.canCheckPractice)
+                    if !learning.processorConsentGranted {
+                        Button("Allow AI help") { controller.openSettings() }.buttonStyle(.plain)
+                    }
                 }
+            }
+            if case .failed(let message) = learning.phase {
+                Text(message).font(.system(size: 12)).foregroundStyle(TrulyTheme.text)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !learning.practiceMessage.isEmpty {
+                Text(learning.practiceMessage).font(.system(size: 12)).foregroundStyle(TrulyTheme.text)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

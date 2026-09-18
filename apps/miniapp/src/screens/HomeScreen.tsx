@@ -4,6 +4,7 @@ import { SkillCard } from '../components/SkillCard'
 
 interface HomeScreenProps {
   skills: Skill[]
+  ownedPathIds: string[]
   activeLearning: ActiveLearningSession | null
   onOpenSkill: (skill: Skill) => void
   onResumeActive: () => void
@@ -12,7 +13,7 @@ interface HomeScreenProps {
   onShowDevices: () => void
 }
 
-export function HomeScreen({ skills, activeLearning, onOpenSkill, onResumeActive, onShowTasks, onShowPaths, onShowDevices }: HomeScreenProps) {
+export function HomeScreen({ skills, ownedPathIds, activeLearning, onOpenSkill, onResumeActive, onShowTasks, onShowPaths, onShowDevices }: HomeScreenProps) {
   return (
     <main className="screen home-screen page-enter">
       <section className="home-lead"><h1>Learn by doing.</h1><p>Start with your own goal or follow a Path shaped by a creator.</p></section>
@@ -30,7 +31,7 @@ export function HomeScreen({ skills, activeLearning, onOpenSkill, onResumeActive
 
       <section className="section-stack">
         <div className="section-heading"><h2>Paths to explore</h2><button className="text-button" type="button" onClick={onShowPaths}>See all</button></div>
-        {skills.slice(0, 2).map((skill) => <SkillCard key={skill.id} skill={skill} onOpen={() => onOpenSkill(skill)} />)}
+        {skills.slice(0, 2).map((skill) => <SkillCard key={skill.id} skill={skill} owned={ownedPathIds.includes(skill.id)} onOpen={() => onOpenSkill(skill)} />)}
       </section>
 
       <button className="device-callout" type="button" onClick={onShowDevices}><span className="device-callout__icon"><Laptop size={20} /></span><span><strong>Connect your Mac</strong><small>Continue learning where the real work happens.</small></span><ArrowRight size={17} /></button>

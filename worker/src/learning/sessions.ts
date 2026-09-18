@@ -5,6 +5,7 @@ import type { Env } from '../types'
 import { parseManifest, resolveSkillVersion, type SkillManifest } from './access'
 import { parseTaskPlan } from './task-plan'
 import { parseStoredResources, type LearningLink } from './resources'
+import { firstUnfinishedStep, withProgress, NEXT_TASK_STEP_SQL } from './progress-state'
 
 interface ActivationBody { deviceId?: string; skillId?: string; skillVersion?: number }
 
@@ -42,6 +43,7 @@ export interface SessionPayload {
   }
   startedAt: string
   updatedAt: string
+  progress?: { completedStepIds: string[]; completedCount: number; total: number; assessment: 'ai_checked' }
 }
 
 function identifier(value: unknown, field: string): string {
@@ -116,7 +118,7 @@ function taskPayload(row: TaskSessionRow): SessionPayload {
       workspaceLink: row.workspace_url ? { title: 'Starting point', url: row.workspace_url } : null,
       resources: parseStoredResources(row.resources_json) },
     currentStep: { ...currentStep, index: currentIndex + 1, total: plan.steps.length,
-      workspaceLink: null, resources: [], challenge: null, rubric: [] },
+      workspaceLink: null, resources: [], challenge: currentStep.challenge, rubric: currentStep.rubric },
     startedAt: row.started_at, updatedAt: row.updated_at ?? row.started_at,
   }
 }
@@ -135,7 +137,7 @@ export async function loadPathSession(env: Env, sessionId: string): Promise<Sess
      WHERE learning_sessions.id = ? LIMIT 1`,
   ).bind(sessionId).first<PathSessionRow>()
   if (!row) throw new HttpError(404, 'learning_session_not_found', 'Truly could not find this learning session. Start the Path again.')
-  return pathPayload(row, parseManifest(row.manifest_json))
+  return withProgress(env, pathPayload(row, parseManifest(row.manifest_json)))
 }
 
 export async function loadTaskSession(env: Env, sessionId: string): Promise<SessionPayload> {
@@ -158,7 +160,7 @@ export async function loadTaskSession(env: Env, sessionId: string): Promise<Sess
      WHERE task_learning_sessions.id = ? LIMIT 1`,
   ).bind(sessionId).first<TaskSessionRow>()
   if (!row) throw new HttpError(404, 'learning_session_not_found', 'Truly could not find this learning session. Start the Task again.')
-  return taskPayload(row)
+  return withProgress(env, taskPayload(row))
 }
 
 export async function loadSessionByIdentity(env: Env, sessionId: string, walletAddress: string, deviceId: string): Promise<SessionPayload> {
@@ -215,6 +217,8 @@ export async function activateLearningSession(request: Request, env: Env): Promi
     return json({ session: await loadTaskSession(env, repeated.session_id), resumed: true })
   }
 
+  const nextStepId = await firstUnfinishedStep(env, pathTask.id, runtime.steps)
+  if (!nextStepId) throw new HttpError(409, 'task_completed', 'You have completed this Path. Find your saved result in Progress.')
   const existing = await env.DB.prepare(`SELECT id FROM task_learning_sessions
     WHERE wallet_address = ? AND device_id = ? AND task_id = ? AND status IN ('active', 'paused')
     ORDER BY started_at DESC LIMIT 1`)
@@ -222,12 +226,15 @@ export async function activateLearningSession(request: Request, env: Env): Promi
   const sessionId = existing?.id ?? crypto.randomUUID()
   const statements = [
     env.DB.prepare(`UPDATE learning_sessions SET status = 'paused', updated_at = ? WHERE device_id = ? AND status = 'active'`).bind(now, input.deviceId),
-    env.DB.prepare(`UPDATE task_learning_sessions SET status = 'paused', updated_at = ? WHERE device_id = ? AND status = 'active' AND id <> ?`).bind(now, input.deviceId, sessionId),
+    env.DB.prepare(`UPDATE task_learning_sessions SET status = 'paused', updated_at = ? WHERE (device_id = ? OR task_id = ?) AND status = 'active' AND id <> ?`).bind(now, input.deviceId, pathTask.id, sessionId),
   ]
-  if (existing) statements.push(env.DB.prepare(`UPDATE task_learning_sessions SET status = 'active', current_step = COALESCE(current_step, ?), updated_at = ? WHERE id = ? AND wallet_address = ? AND device_id = ?`).bind(runtime.step.id, now, sessionId, walletAddress, input.deviceId))
-  else statements.push(env.DB.prepare(`INSERT INTO task_learning_sessions (id, wallet_address, device_id, task_id, status, current_step, started_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`).bind(sessionId, walletAddress, input.deviceId, pathTask.id, runtime.step.id, now, now))
+  if (existing) statements.push(env.DB.prepare(`UPDATE task_learning_sessions SET status = 'active', current_step = ?, updated_at = ? WHERE id = ? AND wallet_address = ? AND device_id = ?`).bind(nextStepId, now, sessionId, walletAddress, input.deviceId))
+  else statements.push(env.DB.prepare(`INSERT INTO task_learning_sessions (id, wallet_address, device_id, task_id, status, current_step, started_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`).bind(sessionId, walletAddress, input.deviceId, pathTask.id, nextStepId, now, now))
   statements.push(
-    env.DB.prepare(`UPDATE learning_tasks SET status = 'active', updated_at = ? WHERE id = ? AND wallet_address = ?`).bind(now, pathTask.id, walletAddress),
+    env.DB.prepare(`UPDATE task_learning_sessions SET current_step = COALESCE(${NEXT_TASK_STEP_SQL}, current_step),
+      status = CASE WHEN ${NEXT_TASK_STEP_SQL} IS NULL THEN 'completed' ELSE 'active' END,
+      completed_at = CASE WHEN ${NEXT_TASK_STEP_SQL} IS NULL THEN ? ELSE NULL END WHERE id = ?`).bind(now, sessionId),
+    env.DB.prepare(`UPDATE learning_tasks SET status = (SELECT status FROM task_learning_sessions WHERE id = ?), updated_at = ? WHERE id = ? AND wallet_address = ?`).bind(sessionId, now, pathTask.id, walletAddress),
     env.DB.prepare(`INSERT INTO task_activation_requests (wallet_address, idempotency_key, device_id, task_id, session_id) VALUES (?, ?, ?, ?, ?)`).bind(walletAddress, key, input.deviceId, pathTask.id, sessionId),
   )
   await env.DB.batch(statements)
@@ -237,23 +244,23 @@ export async function activateLearningSession(request: Request, env: Env): Promi
 export async function listWalletLearningSessions(request: Request, env: Env): Promise<Response> {
   const { walletAddress } = await requireWallet(request, env, 'learning:read')
   const [paths, tasks] = await Promise.all([
-    env.DB.prepare(`SELECT id FROM learning_sessions WHERE wallet_address = ? AND status IN ('active', 'paused') ORDER BY updated_at DESC LIMIT 20`).bind(walletAddress).all<{ id: string }>(),
-    env.DB.prepare(`SELECT id FROM task_learning_sessions WHERE wallet_address = ? AND status IN ('active', 'paused') ORDER BY updated_at DESC LIMIT 20`).bind(walletAddress).all<{ id: string }>(),
+    env.DB.prepare(`SELECT id FROM learning_sessions WHERE wallet_address = ? AND status IN ('active', 'paused', 'completed') ORDER BY updated_at DESC LIMIT 50`).bind(walletAddress).all<{ id: string }>(),
+    env.DB.prepare(`SELECT id FROM task_learning_sessions WHERE wallet_address = ? AND status IN ('active', 'paused', 'completed') ORDER BY updated_at DESC LIMIT 50`).bind(walletAddress).all<{ id: string }>(),
   ])
   const sessions = await Promise.all([
     ...paths.results.map((row) => loadPathSession(env, row.id)),
     ...tasks.results.map((row) => loadTaskSession(env, row.id)),
   ])
   sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-  return json({ sessions: sessions.slice(0, 20) })
+  return json({ sessions: sessions.slice(0, 50) })
 }
 
 export async function getDesktopLearningSession(request: Request, env: Env): Promise<Response> {
   const identity = await authenticateDesktop(request, env)
-  const task = await env.DB.prepare(`SELECT id FROM task_learning_sessions WHERE device_id = ? AND wallet_address = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1`)
+  const task = await env.DB.prepare(`SELECT id FROM task_learning_sessions WHERE device_id = ? AND wallet_address = ? AND status IN ('active', 'completed') ORDER BY (status = 'active') DESC, updated_at DESC LIMIT 1`)
     .bind(identity.deviceId, identity.walletAddress).first<{ id: string }>()
   if (task) return json({ session: await loadTaskSession(env, task.id) })
-  const path = await env.DB.prepare(`SELECT id FROM learning_sessions WHERE device_id = ? AND wallet_address = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1`)
+  const path = await env.DB.prepare(`SELECT id FROM learning_sessions WHERE device_id = ? AND wallet_address = ? AND status IN ('active', 'completed') ORDER BY (status = 'active') DESC, updated_at DESC LIMIT 1`)
     .bind(identity.deviceId, identity.walletAddress).first<{ id: string }>()
   return json({ session: path ? await loadPathSession(env, path.id) : null })
 }

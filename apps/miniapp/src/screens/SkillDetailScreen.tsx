@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, Circle, Clock3, ExternalLink, Laptop, Link2, LockKeyhole, Monitor } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Circle, Clock3, ExternalLink, Laptop, Link2, Monitor } from 'lucide-react'
 import type { useDevices } from '../hooks/useDevices'
 import type { Skill } from '../types'
+import { PurchasePanel } from '../components/PurchasePanel'
+import { handoffActionCopy } from '../core/handoff-presentation'
 
 interface SkillDetailScreenProps {
   skill: Skill
@@ -11,17 +13,29 @@ interface SkillDetailScreenProps {
   onBack: () => void
   onConnect: () => void
   onShowDevices: () => void
+  onOpenCreator: () => void
+  payNim(input: { recipient: string; value: number; reference: string }): Promise<string>
 }
 
 export function SkillDetailScreen({
-  skill, devices, account, walletKind, onBack, onConnect, onShowDevices,
+  skill, devices, account, walletKind, onBack, onConnect, onShowDevices, payNim, onOpenCreator,
 }: SkillDetailScreenProps) {
   const [choosingMac, setChoosingMac] = useState(false)
+  const [purchaseUnlocked, setPurchaseUnlocked] = useState(false)
+  const [deliveredDeviceName, setDeliveredDeviceName] = useState<string | null>(null)
   const isPaid = skill.prices.length > 0
   const firstStep = skill.lessons[0]
   const activeSession = devices.activeLearning?.source.kind === 'path' && devices.activeLearning.source.id === skill.id ? devices.activeLearning : null
+  const saved = devices.learningSessions.find(session => session.source.kind === 'path' && session.source.id === skill.id && session.source.version === skill.version)
+  const owned = devices.ownedPathIds.includes(skill.id)
 
-  useEffect(() => { setChoosingMac(false) }, [skill.id])
+  useEffect(() => { setChoosingMac(false); setPurchaseUnlocked(owned || Boolean(saved)); setDeliveredDeviceName(null) }, [skill.id])
+  useEffect(() => { if (saved || owned) setPurchaseUnlocked(true) }, [saved, owned])
+
+  function unlockPath() {
+    devices.markPathOwned(skill.id)
+    setPurchaseUnlocked(true)
+  }
 
   async function beginMacChoice() {
     const available = await devices.prepareLearning()
@@ -30,7 +44,10 @@ export function SkillDetailScreen({
 
   async function activate(deviceId: string) {
     const session = await devices.activateSkill(skill, deviceId)
-    if (session) setChoosingMac(false)
+    if (session) {
+      setChoosingMac(false)
+      setDeliveredDeviceName(session.device.name)
+    }
   }
 
   return (
@@ -42,7 +59,7 @@ export function SkillDetailScreen({
         <h1>{skill.title}</h1>
         <p>{skill.description}</p>
         <div className="detail-hero__meta">
-          <span>By {skill.creator.displayName}</span>
+          <button className="text-button" type="button" onClick={onOpenCreator}>By {skill.creator.displayName}</button>
           <span>{isPaid ? `${skill.price} NIM` : 'Free'}</span>
         </div>
       </section>
@@ -69,14 +86,16 @@ export function SkillDetailScreen({
       {skill.lessons.length > 0 && <section className="lesson-section">
         <div className="section-heading"><h2>Your learning path</h2><span>{skill.lessons.length} steps</span></div>
         <ol className="lesson-list">
-          {skill.lessons.map((lesson, index) => (
-            <li className={`lesson lesson--${lesson.state}`} key={lesson.title}>
+          {skill.lessons.map((lesson, index) => {
+            const complete = saved?.progress?.completedStepIds.includes(lesson.id) ?? false
+            const state = complete ? 'complete' : (activeSession?.currentStep.id === lesson.id ? 'current' : 'next')
+            return <li className={`lesson lesson--${state}`} key={lesson.id}>
               <span className="lesson__marker">
-                {lesson.state === 'complete' ? <Check size={14} /> : <Circle size={8} fill="currentColor" />}
+                {complete ? <Check size={14} /> : <Circle size={8} fill="currentColor" />}
               </span>
               <span><small>Step {index + 1}</small><strong>{lesson.title}</strong><p>{lesson.detail}</p>{(lesson.workspaceLink || lesson.resources.length > 0) && <em><Link2 size={11} /> {lesson.resources.length + (lesson.workspaceLink ? 1 : 0)} link{lesson.resources.length + (lesson.workspaceLink ? 1 : 0) === 1 ? '' : 's'}</em>}</span>
             </li>
-          ))}
+          })}
         </ol>
       </section>}
 
@@ -84,24 +103,24 @@ export function SkillDetailScreen({
 
       {!skill.runtimeReady && <div className="quiet-card"><h2>Coming to Mac soon</h2><p>We’re still preparing the guided practice for this Path.</p></div>}
 
-      {isPaid ? (
-        <div className="purchase-panel">
-          <div><span className="eyebrow">Payment options</span><strong>{skill.prices.map((price) => `${Number(price.amountAtomic) / 10 ** price.decimals} ${price.asset}`).join(' / ')}</strong></div>
-          <p>Payments for this Path are coming soon. Truly will always show the full amount before asking you to approve.</p>
-          <button className="primary-button" type="button" disabled><LockKeyhole size={16} /> Coming soon</button>
-        </div>
-      ) : activeSession ? (
+      {saved?.status === 'completed' ? <section className="quiet-card"><h2>Path complete</h2><p>Your AI-checked steps are saved in Progress.</p></section> : isPaid && !purchaseUnlocked && account ? (
+        <PurchasePanel skill={skill} account={account} devices={devices} payNim={payNim} onUnlocked={unlockPath} />
+      ) : isPaid && !purchaseUnlocked ? (
+        <button className="primary-button sticky-action" type="button" disabled={walletKind !== 'nimiq'} onClick={onConnect}>Connect Nimiq wallet <ArrowRight size={17} /></button>
+      ) : activeSession && !choosingMac ? (
         <section className="activation-success" role="status">
           <span><Check size={17} /></span>
           <div>
             <h2>Ready on {activeSession.device.name}</h2>
             <p>Step {activeSession.currentStep.index} of {activeSession.currentStep.total}: {activeSession.currentStep.title}</p>
-            <small>Open the app you want to practise in, then click the teal Truly companion.</small>
+            <small>Truly will confirm the handoff on your Mac. If the companion is hidden, show it from the menu bar when you are ready.</small>
           </div>
           <div className="activation-success__actions">
-            <button className="primary-button" type="button" disabled={devices.busy} onClick={() => { void activate(activeSession.device.id) }}>
-              {devices.busy ? 'Getting the Mac ready…' : 'Continue on my Mac'} <ArrowRight size={16} />
-            </button>
+            {deliveredDeviceName
+              ? <div className="handoff-delivered"><Check size={16} /> {handoffActionCopy({ busy: false, deliveredDeviceName })}</div>
+              : <button className="primary-button" type="button" disabled={devices.busy} onClick={() => { void activate(activeSession.device.id) }}>
+                {handoffActionCopy({ busy: devices.busy, deliveredDeviceName: null })} <ArrowRight size={16} />
+              </button>}
             <button className="secondary-button" type="button" disabled={devices.busy} onClick={beginMacChoice}>Use another Mac</button>
           </div>
         </section>

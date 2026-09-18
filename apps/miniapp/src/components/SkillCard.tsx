@@ -1,22 +1,25 @@
-import { ArrowUpRight, LockKeyhole } from 'lucide-react'
+import { ArrowUpRight, Check, LockKeyhole } from 'lucide-react'
 import type { Skill } from '../types'
+import { pathAccessPresentation } from '../core/path-access-presentation'
 import { ProgressRing } from './ProgressRing'
 
 interface SkillCardProps {
   skill: Skill
+  owned: boolean
   onOpen: () => void
 }
 
-export function SkillCard({ skill, onOpen }: SkillCardProps) {
+export function SkillCard({ skill, owned, onOpen }: SkillCardProps) {
+  const access = pathAccessPresentation({ price: skill.price, owned })
   return (
     <button className={`skill-card skill-card--${skill.theme}`} type="button" onClick={onOpen}>
       <span className="skill-card__topline">
         <span>{skill.eyebrow}</span>
-        {skill.price > 0 ? (
-          <span className="skill-price"><LockKeyhole size={12} /> {skill.price} NIM</span>
-        ) : (
-          <span className="skill-price">Free</span>
-        )}
+        <span className={`skill-price skill-price--${access.kind}`}>
+          {access.kind === 'paid' && <LockKeyhole size={12} />}
+          {access.kind === 'owned' && <Check size={12} />}
+          {access.label}
+        </span>
       </span>
       <span className="skill-card__body">
         <span>

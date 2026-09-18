@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NIM price — Step 1 practice</title>
+  </head>
+  <body>
+    <main>
+      <h1>Checkout price</h1>
+      <h2 id="price">Running conversion…</h2>
+      <p>Integer payment amount: <strong id="luna"></strong></p>
+      <p>1 NIM = 100,000 Luna. The price below is derived from the integer amount, not a separate hard-coded NIM value.</p>
+      <h2>Running implementation</h2>
+      <pre id="implementation"></pre>
+      <p>Local practice only. This page makes no wallet requests, sends no money and does not grant progress.</p>
+      <noscript>Enable JavaScript to run the price conversion.</noscript>
+    </main>
+    <script id="price-code">
+const LUNA_PER_NIM = 100_000n;
+const amountLuna = 1_000n; // Integer source of truth; no floating-point arithmetic.
+
+function formatNim(luna) {
+  if (typeof luna !== 'bigint' || luna < 0n) {
+    throw new Error('Amount must be a non-negative integer in Luna.');
+  }
+  const whole = luna / LUNA_PER_NIM;
+  const fraction = (luna % LUNA_PER_NIM)
+    .toString().padStart(5, '0').replace(/0+$/, '');
+  return `${whole}${fraction ? '.' + fraction : ''} NIM`;
+}
+
+document.getElementById('price').textContent = formatNim(amountLuna);
+document.getElementById('luna').textContent = `${amountLuna} Luna`;
+    </script>
+    <script>
+      // Show the actual executed source alongside its result for screen assessment.
+      document.getElementById('implementation').textContent =
+        document.getElementById('price-code').textContent.trim();
+    </script>
+  </body>
+</html>

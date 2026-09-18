@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { BrandMark } from './BrandMark'
 
-export function Header() {
+interface HeaderProps { page?: 'home' | 'docs' }
+
+export function Header({ page = 'home' }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -17,7 +19,7 @@ export function Header() {
   return (
     <header className={`site-header${scrolled ? ' site-header--scrolled' : ''}`}>
       <nav className="nav shell" aria-label="Main navigation">
-        <a className="brand" href="#top" aria-label="Truly home" onClick={closeMenu}>
+        <a className="brand" href="/" aria-label="Truly home" onClick={closeMenu}>
           <BrandMark />
           <span>Truly</span>
         </a>
@@ -35,11 +37,10 @@ export function Header() {
         </button>
 
         <div id="nav-links" className={`nav-links${menuOpen ? ' nav-links--open' : ''}`}>
-          <a href="#product" onClick={closeMenu}>Product</a>
-          <a href="#nimiq" onClick={closeMenu}>Nimiq</a>
-          <a href="#privacy" onClick={closeMenu}>Privacy</a>
-          <a href="#faq" onClick={closeMenu}>FAQ</a>
-          <a className="nav-cta" href="#availability" onClick={closeMenu}>macOS app</a>
+          <a href="/#product" onClick={closeMenu}>Product</a>
+          <a href="/#nimiq" onClick={closeMenu}>Nimiq</a>
+          <a href="/docs" aria-current={page === 'docs' ? 'page' : undefined} onClick={closeMenu}>Docs</a>
+          <a className="nav-cta" href="/#availability" onClick={closeMenu}>Get Truly</a>
         </div>
       </nav>
     </header>

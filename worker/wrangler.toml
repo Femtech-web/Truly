@@ -11,6 +11,9 @@ GROQ_MODEL = "qwen/qwen3.8-27b"
 GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
 GROQ_DATA_CONTROLS_CONFIRMED = "false"
 AI_DAILY_LIMIT = "100"
+NIM_PAYMENTS_ENABLED = "false"
+USDT_PAYMENTS_ENABLED = "false"
+USDT_MAINNET_APPROVED = "false"
 
 [[d1_databases]]
 binding = "DB"
