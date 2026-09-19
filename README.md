@@ -192,7 +192,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full boundaries and dat
 
 Download [Truly 0.1.0 for macOS](https://github.com/Femtech-web/Truly/releases/download/v0.1.0/Truly-0.1.0-macOS-universal.dmg), open the DMG and drag Truly into Applications. The universal build supports Apple Silicon and Intel Macs running macOS 14.2 or newer.
 
-This free direct-download release is ad-hoc signed rather than Apple-notarized. On first launch, Control-click **Truly** in Applications, choose **Open**, then confirm **Open**. If macOS still blocks it, use **System Settings → Privacy & Security → Open Anyway**. Never disable Gatekeeper globally. See the [installation guide](apps/desktop/INSTALL.md).
+This free direct-download release is ad-hoc signed rather than Apple-notarized, so macOS may show **“Truly” Not Opened** on the first launch. If it does:
+
+1. Click **Done**—do not choose **Move to Bin**.
+2. Confirm that **Truly.app** is in **Applications**.
+3. Open **System Settings → Privacy & Security** and scroll to **Security**.
+4. Find the notice that Truly was blocked because it is not from an identified developer, then click **Open Anyway**.
+5. Confirm with Touch ID or your Mac password, then click **Open** in the final prompt.
+
+You can also Control-click **Truly** in Applications, choose **Open**, then confirm **Open**. Approval is required only for the first launch. Never disable Gatekeeper globally. See the [installation guide](apps/desktop/INSTALL.md).
 
 ## Run Truly locally
 

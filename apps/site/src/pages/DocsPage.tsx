@@ -208,7 +208,18 @@ export function DocsPage() {
             <details><summary>A payment is pending</summary><p>Return to the Path and tap <strong>Check payment</strong>. Do not create a second payment. Nimiq Pay remains the source of truth for the transaction and complete wallet balance.</p></details>
             <details><summary>My progress did not change</summary><p>Asking Truly a question does not complete a step. On the Mac, choose <strong>Open Task → Check my work</strong>, pass every visible criterion, then open <strong>Progress</strong> on the phone and refresh.</p></details>
             <details><summary>Why can’t I change a submitted Path?</summary><p>The reviewer must see the exact revision that could become public. Wait for approval or requested changes. A rejected draft can be revised or deleted from its editor.</p></details>
-            <details><summary>How is the macOS app installed?</summary><p>Download the .dmg from Truly’s website, open it and drag Truly into Applications. On the first launch, Control-click Truly, choose <strong>Open</strong>, then confirm. This free direct-download build is not Apple-notarized, so macOS displays an unverified-developer warning.</p></details>
+            <details>
+              <summary>How is the macOS app installed?</summary>
+              <p>Download the .dmg from Truly’s website, open it and drag Truly into Applications. This free direct-download build is not Apple-notarized, so macOS may show <strong>“Truly” Not Opened</strong> on the first launch.</p>
+              <ol>
+                <li>Click <strong>Done</strong>—do not choose <strong>Move to Bin</strong>.</li>
+                <li>Confirm that Truly is in <strong>Applications</strong>.</li>
+                <li>Open <strong>System Settings → Privacy &amp; Security</strong> and scroll to <strong>Security</strong>.</li>
+                <li>Find the notice that Truly was blocked because it is not from an identified developer, then click <strong>Open Anyway</strong>.</li>
+                <li>Confirm with Touch ID or your Mac password, then click <strong>Open</strong> in the final prompt.</li>
+              </ol>
+              <p>You can also Control-click Truly in Applications, choose <strong>Open</strong>, then confirm <strong>Open</strong>. Approval is required only for the first launch. Never disable Gatekeeper globally.</p>
+            </details>
           </section>
         </div>
       </div>

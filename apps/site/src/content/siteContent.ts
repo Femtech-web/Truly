@@ -27,6 +27,6 @@ export const frequentlyAskedQuestions = [
   {
     question: 'How do I install the macOS app?',
     answer:
-      'Download the universal .dmg, drag Truly into Applications, then Control-click Truly and choose Open for the first launch. This free direct-download build is not Apple-notarized, so macOS displays an unverified-developer warning.',
+      'Download the universal .dmg and drag Truly into Applications. If macOS shows “Truly” Not Opened, click Done—not Move to Bin—then use System Settings → Privacy & Security → Open Anyway and confirm with Touch ID or your password. You can also Control-click Truly in Applications and choose Open. This approval is required only once; never disable Gatekeeper globally.',
   },
 ]
